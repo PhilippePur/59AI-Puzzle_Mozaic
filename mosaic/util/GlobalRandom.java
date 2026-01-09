@@ -1,3 +1,5 @@
+package mosaic.util;
+
 import java.util.*;
 
 public class GlobalRandom {
