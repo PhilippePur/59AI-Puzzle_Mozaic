@@ -1,5 +1,6 @@
-import java.util.List;
+package mosaic.selection;
 
+import java.util.List;
 import mosaic.puzzle.Individual;
 import mosaic.util.GlobalRandom;
 
