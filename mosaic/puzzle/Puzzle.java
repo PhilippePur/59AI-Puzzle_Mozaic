@@ -1,132 +1,139 @@
 package mosaic.puzzle;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
+/**
+ * {@code Puzzle} merepresentasikan definisi soal Mosaic/Fill-a-Pix.
+ * <p>
+ * Kelas ini berfungsi untuk:
+ * <ul>
+ * <li><Menyimpan dimensi papan permainan (baris dan kolom).</li>
+ * <li>Menyimpan daftar petunjuk ({@link Clue}).</li>
+ * <li>Membuat deduksi menggunakan heuristic awal
+ * <li>Menyimpan status sel yang telah ditandai isFixed oleh proses heuristik awal.</li>
+ * </ul>
+ * <p>
+ * Kelas ini dirancang agar {@code Individual} tidak perlu menyimpan
+ * salinan status isFixed secara terpisah, melainkan cukup merujuk ke objek ini.
+ * </p>
+ */
 public class Puzzle {
-    private List<Clue> clues = new ArrayList<>();
-    private int rows;
-    private int cols;
-    private boolean[][] fixedValues;
-    private boolean[][] fixedCells;
+    
+    /** Jumlah baris pada papan permainan. */
+    private final int rows;
 
+    /** Jumlah kolom pada papan permainan. */
+    private final int cols;
+
+    /** Daftar semua clue (angka petunjuk) yang ada pada puzzle. */
+    private final List<Clue> clues;
+    
+    /** * Matriks penanda apakah sebuah sel dikunci. 
+     * {@code true} berarti sel tersebut telah dipastikan nilainya oleh heuristik 
+     * dan tidak boleh diubah oleh algoritma genetik.
+     */
+    private final boolean[][] isFixed;
+
+    /** * Matriks yang menyimpan nilai warna (Hitam/Putih) untuk sel yang dikunci.
+     * Hanya relevan jika {@code isFixed[r][c]} bernilai {@code true}.
+     */
+    private final boolean[][] fixedValues;
+
+    /**
+     * Konstruktor untuk membuat objek Puzzle kosong dengan dimensi tertentu.
+     * * @param rows jumlah baris
+     * @param cols jumlah kolom
+     */
     public Puzzle(int rows, int cols) {
         this.rows = rows;
         this.cols = cols;
-        this.fixedCells = new boolean[rows][cols]; // menandai apakah si cell itu boleh disentuh/diubah atau ngga
-        this.fixedValues = new boolean[rows][cols]; // menandai warna dari si cells nya
+        this.clues = new ArrayList<>();
+        this.isFixed = new boolean[rows][cols];
+        this.fixedValues = new boolean[rows][cols];
     }
 
-    // Constructor untuk puzzle dengan fixed cells
-    public Puzzle(int rows, int cols, boolean[][] fixedCells) {
-        this(rows, cols);
-        if (fixedCells != null)
-            this.fixedCells = fixedCells;
+    /**
+     * Menambahkan clue baru ke dalam puzzle.
+     * @param clue objek {@link Clue} yang akan ditambahkan
+     */
+    public void addClue(Clue clue) {
+        this.clues.add(clue);
     }
 
-    public List<Clue> getClues() {
-        return new ArrayList<>(clues); // Return copy untuk encapsulation
-    }
-
-    public int getRows() {
-        return rows;
-    }
-
-    public int getCols() {
-        return cols;
-    }
-
-    public boolean[][] getFixedCells() {
-        boolean[][] copy = new boolean[rows][cols];
-        for (int i = 0; i < rows; i++) {
-            System.arraycopy(fixedCells[i], 0, copy[i], 0, cols);
-        }
-        return copy;
-    }
-
-    public boolean isFixed(int row, int col) {
-        if (row < 0 || row >= rows || col < 0 || col >= cols) {
-            return false;
-        }
-        return fixedCells[row][col];
-    }
-
-    public void setFixedCell(int row, int col, boolean fixed) {
-        if (isValidPosition(row, col)) {
-            fixedCells[row][col] = fixed;
+    /**
+     * Mengunci status sel tertentu dengan nilai warna yang pasti.
+     * Metode ini biasanya dipanggil oleh proses <i>Heuristic Pre-processing</i>.
+     * @param r indeks baris
+     * @param c indeks kolom
+     * @param value nilai warna yang benar ({@code true} = Hitam, {@code false} = Putih)
+     */
+    public void setFixedCell(int r, int c, boolean value) {
+        if (isValidPosition(r, c)) {
+            isFixed[r][c] = true;
+            fixedValues[r][c] = value;
         }
     }
 
-    // VALIDATION METHODS
-    public boolean isValidPosition(int row, int col) {
-        return row >= 0 && row < rows && col >= 0 && col < cols;
+    /**
+     * Memeriksa apakah sel pada posisi tertentu statusnya terkunci (Fixed).
+     * @param r indeks baris
+     * @param c indeks kolom
+     * @return {@code true} jika sel terkunci, {@code false} jika bebas
+     */
+    public boolean isFixed(int r, int c) {
+        if (!isValidPosition(r, c)) return false;
+        return isFixed[r][c];
     }
 
-    public boolean hasClueAt(int row, int col) {
-        for (Clue clue : clues) {
-            if (clue.getRow() == row && clue.getCol() == col) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public Clue getClueAt(int row, int col) {
-        for (Clue clue : clues) {
-            if (clue.getRow() == row && clue.getCol() == col) {
-                return clue;
-            }
-        }
-        return null;
-    }
-
+    /**
+     * Mendapatkan nilai warna yang benar untuk sel yang terkunci.
+     * @param r indeks baris
+     * @param c indeks kolom
+     * @return {@code true} jika Hitam, {@code false} jika Putih
+     */
     public boolean getFixedValue(int r, int c) {
         return fixedValues[r][c];
     }
 
-    // ini function buat ngefixin dia item ato putih
-    public void setFixedValue(int row, int col, boolean value) {
-        fixedValues[row][col] = value;
+    /**
+     * @return jumlah baris papan
+     */
+    public int getRows() { return rows; }
+
+    /**
+     * @return jumlah kolom papan
+     */
+    public int getCols() { return cols; }
+
+    /**
+     * @return daftar seluruh clue dalam puzzle
+     */
+    public List<Clue> getClues() { return clues; }
+
+    /**
+     * Memeriksa apakah koordinat (r, c) berada di dalam batas papan permainan.
+     * @param r indeks baris
+     * @param c indeks kolom
+     * @return {@code true} jika posisi valid
+     */
+    public boolean isValidPosition(int r, int c) {
+        return r >= 0 && r < rows && c >= 0 && c < cols;
     }
-
-    // UTILITY METHODS
-    public int getTotalClues() {
-        return clues.size();
-    }
-
-    public double getClueDensity() {
-        if (rows * cols == 0)
-            return 0.0;
-        return (double) clues.size() / (rows * cols);
-    }
-
-    // Untuk debugging
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Puzzle %d x %d (%d clues, density: %.2f)\n",
-                rows, cols, clues.size(), getClueDensity()));
-
-        sb.append("Clues:\n");
+    
+    /**
+     * Mengambil objek {@link Clue} pada posisi tertentu.
+     * @param r indeks baris
+     * @param c indeks kolom
+     * @return objek Clue jika ada, atau {@code null} jika tidak ada
+     */
+    public Clue getClueAt(int r, int c) {
         for (Clue clue : clues) {
-            sb.append(String.format("  (%d, %d) = %d\n",
-                    clue.getRow(), clue.getCol(), clue.getValue()));
+            if (clue.getRow() == r && clue.getCol() == c) return clue;
         }
-
-        sb.append("Fixed cells:\n");
-        for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < cols; c++) {
-                sb.append(fixedCells[r][c] ? "X" : ".");
-            }
-            sb.append("\n");
-        }
-
-        return sb.toString();
-
+        return null;
     }
 
-    // method buat preprocessing, apply semua hard constraint yang ada ditemukan
-    // secara intuitif untuk menghasilkan initial population yang lebih baik
     public void preprocess() {
         // untuk semua clue yang ada, dicek apakah clue nya memenuhi beberapa hard
         // constraints
@@ -149,8 +156,7 @@ public class Puzzle {
                                                             // (kyknya harusnya gaperlu tapi gapapa dicek aja)
                             continue;
 
-                        setFixedValue(tempR, tempC, false);
-                        setFixedCell(tempR, tempC, true);
+                        setFixedCell(tempR, tempC, false);
                     }
                 }
             }
@@ -166,7 +172,6 @@ public class Puzzle {
                                                             // (kyknya harusnya gaperlu tapi gapapa dicek aja)
                             continue;
 
-                        setFixedValue(tempR, tempC, true);
                         setFixedCell(tempR, tempC, true);
                     }
                 }
@@ -176,7 +181,6 @@ public class Puzzle {
             // 6 di tepian juga sama, dst
             else if (v == valid) {
                 for (int[] cell : validNeighbor) {
-                    setFixedValue(cell[0], cell[1], true); // hitam
                     setFixedCell(cell[0], cell[1], true); // gabole diubah ubah
 
                 }
@@ -187,7 +191,7 @@ public class Puzzle {
             // kalo misal nya ada di pojokan brrti ada kemungkinan apply yang beda 2,
             // tinggal cek aja
             // CEK KANAN
-            if (hasClueAt(r, c + 1)) {
+            if (getClueAt(r, c + 1)!= null) {
                 Clue other = getClueAt(r, c + 1);
                 if (other.getCol() == cols - 1)
                     diffXConstraint(other, clue, 2);
@@ -195,7 +199,7 @@ public class Puzzle {
             }
 
             // CEK KIRI
-            if (hasClueAt(r, c - 1)) {
+            if (getClueAt(r, c - 1)!= null) {
                 Clue other = getClueAt(r, c - 1);
                 if (other.getCol() == 0)
                     diffXConstraint(other, clue, 2);
@@ -203,7 +207,7 @@ public class Puzzle {
             }
 
             // CEK BAWAH
-            if (hasClueAt(r + 1, c)) {
+            if (getClueAt(r + 1, c) != null) {
                 Clue other = getClueAt(r + 1, c);
                 if (other.getRow() == rows - 1)
                     diffXConstraint(other, clue, 2);
@@ -211,7 +215,7 @@ public class Puzzle {
             }
 
             // CEK ATAS
-            if (hasClueAt(r - 1, c)) {
+            if (getClueAt(r - 1, c) != null) {
                 Clue other = getClueAt(r - 1, c);
                 if (other.getRow() == 0)
                     diffXConstraint(other, clue, 2);
@@ -274,15 +278,13 @@ public class Puzzle {
                 row = rowSmall + i;
                 col = colSmall - 1;
                 if (isValidPosition(row, col)) {
-                    setFixedValue(row, col, false);
-                    setFixedCell(row, col, true);
+                    setFixedCell(row, col, false);
                 }
 
                 // set item di kanan big
                 row = rowBig + i;
                 col = colBig + 1;
                 if (isValidPosition(row, col)) {
-                    setFixedValue(row, col, true);
                     setFixedCell(row, col, true);
                 }
             }
@@ -292,15 +294,13 @@ public class Puzzle {
                 row = rowSmall + i;
                 col = colSmall + 1;
                 if (isValidPosition(row, col)) {
-                    setFixedValue(row, col, false);
-                    setFixedCell(row, col, true);
+                    setFixedCell(row, col, false);
                 }
 
                 // set item di kiri big
                 row = rowBig + i;
                 col = colBig - 1;
                 if (isValidPosition(row, col)) {
-                    setFixedValue(row, col, true);
                     setFixedCell(row, col, true);
                 }
             }
@@ -310,15 +310,13 @@ public class Puzzle {
                 row = rowSmall - 1;
                 col = colSmall + i;
                 if (isValidPosition(row, col)) {
-                    setFixedValue(row, col, false);
-                    setFixedCell(row, col, true);
+                    setFixedCell(row, col, false);
                 }
 
                 // set item di bawah big
                 row = rowBig + 1;
                 col = colBig + i;
                 if (isValidPosition(row, col)) {
-                    setFixedValue(row, col, true);
                     setFixedCell(row, col, true);
                 }
             }
@@ -328,15 +326,13 @@ public class Puzzle {
                 row = rowSmall + 1;
                 col = colSmall + i;
                 if (isValidPosition(row, col)) {
-                    setFixedValue(row, col, false);
-                    setFixedCell(row, col, true);
+                    setFixedCell(row, col, false);
                 }
 
                 // set item di atas big
                 row = rowBig - 1;
                 col = colBig + i;
                 if (isValidPosition(row, col)) {
-                    setFixedValue(row, col, true);
                     setFixedCell(row, col, true);
                 }
             }
