@@ -26,8 +26,8 @@ public class ConstraintAwareMutation implements MutationStrategy {
     public void mutate(Individual individual, Puzzle puzzle) {
         List<Clue> problematicClues = findProblematicClues(individual, puzzle);
 
-        if (problematicClues.isEmpty()) {//ini gw pgnnya gausa di mutate lagi kan udh bnr smua tapi gatau boleh ga
-            
+        if (problematicClues.isEmpty()) {// ini gw pgnnya gausa di mutate lagi kan udh bnr smua tapi gatau boleh ga
+
             fallbackBasicMutation(individual);
             return;
         }
@@ -43,7 +43,7 @@ public class ConstraintAwareMutation implements MutationStrategy {
         // Pilih pattern yang berbeda dengan current state
         boolean[][] newPattern = selectNewPattern(validPatterns, individual, selectedClue);
         applyPatternToArea(individual, selectedClue, newPattern);
-        
+
         individual.markDirty(); // Tandai bahwa fitness perlu dihitung ulang
     }
 
@@ -55,7 +55,7 @@ public class ConstraintAwareMutation implements MutationStrategy {
         for (Clue clue : allClues) {
             int actualBlack = countBlackIn3x3Area(individual, clue.getRow(), clue.getCol());
             int error = Math.abs(actualBlack - clue.getValue());
-            
+
             if (error > 0) {
                 cluesWithError.add(new ClueWithError(clue, error));
             }
@@ -77,23 +77,26 @@ public class ConstraintAwareMutation implements MutationStrategy {
     private static class ClueWithError {
         final Clue clue;
         final int error;
-        
+
         ClueWithError(Clue clue, int error) {
             this.clue = clue;
             this.error = error;
         }
-        
-        int getError() { return error; }
+
+        int getError() {
+            return error;
+        }
     }
 
     private Clue selectClueToFix(List<Clue> problematicClues) {
-        if (problematicClues.isEmpty()) return null;
-        
+        if (problematicClues.isEmpty())
+            return null;
+
         if (problematicClues.size() <= 3) {
             return problematicClues.get(0);
         }
 
-        //EXPERIMENT 
+        // EXPERIMENT
         if (random.nextDouble() < 0.7) {
             return problematicClues.get(random.nextInt(Math.min(3, problematicClues.size())));
         } else {
@@ -101,11 +104,11 @@ public class ConstraintAwareMutation implements MutationStrategy {
         }
     }
 
-    private boolean[][] selectNewPattern(List<boolean[][]> validPatterns,Individual individual,Clue clue) {
+    private boolean[][] selectNewPattern(List<boolean[][]> validPatterns, Individual individual, Clue clue) {
         // Pilih random pattern
         return validPatterns.get(random.nextInt(validPatterns.size()));
-        
-        //bisa juga ambil yang paling beda sama current biar semakin diverse
+
+        // bisa juga ambil yang paling beda sama current biar semakin diverse
     }
 
     private void applyPatternToArea(Individual individual, Clue clue, boolean[][] pattern) {
@@ -118,9 +121,9 @@ public class ConstraintAwareMutation implements MutationStrategy {
                 int c = centerC + dc;
 
                 if (r >= 0 && r < individual.getRows() &&
-                    c >= 0 && c < individual.getCols() &&
-                    !individual.isFixed(r, c)) {
-                    
+                        c >= 0 && c < individual.getCols() &&
+                        !individual.isFixed(r, c)) {
+
                     individual.setCell(r, c, pattern[dr + 1][dc + 1]);
                 }
             }
@@ -138,7 +141,7 @@ public class ConstraintAwareMutation implements MutationStrategy {
                 }
             }
         }
-        
+
         if (changed) {
             individual.markDirty();
         }
@@ -148,9 +151,9 @@ public class ConstraintAwareMutation implements MutationStrategy {
         int count = 0;
         for (int r = centerR - 1; r <= centerR + 1; r++) {
             for (int c = centerC - 1; c <= centerC + 1; c++) {
-                if (r >= 0 && r < individual.getRows() && 
-                    c >= 0 && c < individual.getCols() && 
-                    individual.getCell(r, c)) {
+                if (r >= 0 && r < individual.getRows() &&
+                        c >= 0 && c < individual.getCols() &&
+                        individual.getCell(r, c)) {
                     count++;
                 }
             }

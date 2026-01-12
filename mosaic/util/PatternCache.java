@@ -27,8 +27,9 @@ public class PatternCache {
         return instance;
     }
 
-    //generate pola untuk semua kemungkinan angka clue (0 - 9)
-    //diprecompute biar kalau misal dipanggil-panggil lagi sama method lain jadinya O(1), tinggal liat hashmap
+    // generate pola untuk semua kemungkinan angka clue (0 - 9)
+    // diprecompute biar kalau misal dipanggil-panggil lagi sama method lain jadinya
+    // O(1), tinggal liat hashmap
     private void precomputePatterns() {
         for (int k = 0; k <= 9; k++) {
             List<boolean[][]> patterns = new ArrayList<>();
@@ -49,10 +50,10 @@ public class PatternCache {
         int currentCount = countTrue(current, index);
         int remainingSlots = 9 - index;
 
-        // kalau clue yang digenerate sudah ga mungkin untuk bisa memenuhi target count 
+        // kalau clue yang digenerate sudah ga mungkin untuk bisa memenuhi target count
         if (currentCount + remainingSlots < targetCount)
             return;
-        // kalau yang udah diitung sebagian ternyata melebihi target 
+        // kalau yang udah diitung sebagian ternyata melebihi target
         if (currentCount > targetCount)
             return;
 
@@ -82,7 +83,8 @@ public class PatternCache {
     }
 
     // convert dari array 1 dimensi ke 2 dimensi
-    // tujuannya sih buat lebih gampang pas bikin patternya di 1dimensi baru convert ke 2dimensi
+    // tujuannya sih buat lebih gampang pas bikin patternya di 1dimensi baru convert
+    // ke 2dimensi
     private boolean[][] reshape3x3(boolean[] flat) {
         boolean[][] grid = new boolean[3][3];
         for (int i = 0; i < 3; i++) {
@@ -91,7 +93,7 @@ public class PatternCache {
         return grid;
     }
 
-    //ini buat method lain manggil ini buat dapetin pattern yang valid
+    // ini buat method lain manggil ini buat dapetin pattern yang valid
     public List<boolean[][]> getValidPatterns(int value) {
         if (value < 0 || value > 9)
             return new ArrayList<>();
