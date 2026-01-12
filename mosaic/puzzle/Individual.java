@@ -17,17 +17,6 @@ public class Individual {
     private boolean[][] grid;
 
     /**
-     * Matriks yang menandai sel mana yang tidak boleh diubah (hasil deduksi aturan)
-     */
-    private boolean[][] isFixed;
-
-    /**
-     * Dimensi papan
-     */
-    private int rows;
-    private int cols;
-
-    /**
      * Referensi objek puzzle
      */
     private Puzzle puzzle;
@@ -51,12 +40,7 @@ public class Individual {
      */
     public Individual(Puzzle puzzle, Random rng) {
         this.puzzle = puzzle;
-        this.rows = puzzle.getRows();
-        this.cols = puzzle.getCols();
-        this.grid = new boolean[rows][cols];
-
-        // Mengambil copy matriks sel fixed dari puzzle yg sudah ditentukan dari deduksi aturan
-        this.isFixed = puzzle.getFixedCells();
+        this.grid = new boolean[puzzle.getRows()][puzzle.getCols()];
 
         // Mengisi nilai fitness awal dan fitnessDirty sebagai perlu dihitung
         this.fitness = -1.0;
@@ -73,8 +57,6 @@ public class Individual {
      */
     private Individual(Puzzle puzzle) {
         this.puzzle = puzzle;
-        this.rows = puzzle.getRows();
-        this.cols = puzzle.getCols();
     }
 
     /**
@@ -82,9 +64,9 @@ public class Individual {
      * @param rng objek Random global
      */
     private void initializeRandomGrid(Random rng) {
-        for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < cols; c++) {
-                if (!isFixed[r][c]) {
+        for (int r = 0; r < puzzle.getRows(); r++) {
+            for (int c = 0; c < puzzle.getCols(); c++) {
+                if (!puzzle.isFixed(r, c)) {
                     grid[r][c] = rng.nextBoolean();
                 }
             }
@@ -96,7 +78,7 @@ public class Individual {
      * @return jumlah baris papan
      */
     public int getRows() {
-        return rows;
+        return puzzle.getRows();
     }
 
     /**
@@ -104,7 +86,7 @@ public class Individual {
      * @return jumlah kolom papan
      */
     public int getCols() {
-        return cols;
+        return puzzle.getCols();
     }
 
     /**
@@ -124,7 +106,7 @@ public class Individual {
      * @return true jika fix, false jika tidak fix
      */
     public boolean isFixed(int r, int c) {
-        return isFixed[r][c];
+        return puzzle.isFixed(r, c);
     }
 
     /**
@@ -146,9 +128,9 @@ public class Individual {
      */
     public boolean[][] getGrid() {
         // Return defensive copy untuk safety
-        boolean[][] copy = new boolean[rows][cols];
-        for (int i = 0; i < rows; i++) {
-            System.arraycopy(grid[i], 0, copy[i], 0, cols);
+        boolean[][] copy = new boolean[puzzle.getRows()][puzzle.getCols()];
+        for (int i = 0; i < puzzle.getRows(); i++) {
+            System.arraycopy(grid[i], 0, copy[i], 0, puzzle.getCols());
         }
         return copy;
     }
@@ -161,7 +143,7 @@ public class Individual {
      */
     public void setCell(int r, int c, boolean value) {
         // Jika sel tidak fix, set nilai baru dan tandai fitness menjadi dirty
-        if (!isFixed[r][c]) {
+        if (!puzzle.isFixed(r, c)) {
             grid[r][c] = value;
             markDirty();
         }
@@ -174,7 +156,7 @@ public class Individual {
      */
     public void flipCell(int r, int c) {
         // Jika sel tidak fix, balik nilai dan tandai fitness menjadi dirty
-        if (!isFixed[r][c]) {
+        if (!puzzle.isFixed(r, c)) {
             grid[r][c] = !grid[r][c];
             markDirty();
         }
@@ -243,7 +225,7 @@ public class Individual {
                 int c = centerC + dc;
 
                 // Memastikan koordinat tetap dalam batas papan
-                if (r >= 0 && r < rows && c >= 0 && c < cols && grid[r][c]) {
+                if (r >= 0 && r < puzzle.getRows() && c >= 0 && c < puzzle.getCols() && grid[r][c]) {
                     count++;
                 }
             }
@@ -261,15 +243,9 @@ public class Individual {
         Individual copy = new Individual(this.puzzle);
 
         // Copy matriks grid
-        copy.grid = new boolean[rows][cols];
-        for (int i = 0; i < rows; i++) {
-            System.arraycopy(this.grid[i], 0, copy.grid[i], 0, cols);
-        }
-
-        // Copy matriks isFixed
-        copy.isFixed = new boolean[rows][cols];
-        for (int i = 0; i < rows; i++) {
-            System.arraycopy(this.isFixed[i], 0, copy.isFixed[i], 0, cols);
+        copy.grid = new boolean[puzzle.getRows()][puzzle.getCols()];
+        for (int i = 0; i < puzzle.getRows(); i++) {
+            System.arraycopy(this.grid[i], 0, copy.grid[i], 0, puzzle.getCols());
         }
 
         // Copy fitness dan flag fitnessDirty
