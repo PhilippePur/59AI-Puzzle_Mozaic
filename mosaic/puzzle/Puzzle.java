@@ -133,4 +133,209 @@ public class Puzzle {
         }
         return null;
     }
+
+    public void preprocess() {
+        // untuk semua clue yang ada, dicek apakah clue nya memenuhi beberapa hard
+        // constraints
+        for (Clue clue : clues) {
+            int r = clue.getRow();
+            int c = clue.getCol();
+            int v = clue.getValue();
+
+            List<int[]> validNeighbor = getValidNeighbors(r, c);
+            int valid = validNeighbor.size();
+
+            // kalo ada clue 0, berarti sekitarnya semua putih
+            if (v == 0) {
+                for (int deltaR = -1; deltaR <= 1; deltaR++) {
+                    for (int deltaC = -1; deltaC <= 1; deltaC++) {
+                        int tempR = r + deltaR;
+                        int tempC = c + deltaC;
+
+                        if (!isValidPosition(tempR, tempC)) // kalo misal posisi nya ga valid, gausa di masukin fixed
+                                                            // (kyknya harusnya gaperlu tapi gapapa dicek aja)
+                            continue;
+
+                        setFixedCell(tempR, tempC, false);
+                    }
+                }
+            }
+
+            // kalo clue nya 9, item semua brrti
+            else if (v == 9) {
+                for (int deltaR = -1; deltaR <= 1; deltaR++) {
+                    for (int deltaC = -1; deltaC <= 1; deltaC++) {
+                        int tempR = r + deltaR;
+                        int tempC = c + deltaC;
+
+                        if (!isValidPosition(tempR, tempC)) // kalo misal posisi nya ga valid, gausa di masukin fixed
+                                                            // (kyknya harusnya gaperlu tapi gapapa dicek aja)
+                            continue;
+
+                        setFixedCell(tempR, tempC, true);
+                    }
+                }
+            }
+
+            // kalo clue nya 4 dan cuma ada 4 valid neighbor(di corner) set item semua, kalo
+            // 6 di tepian juga sama, dst
+            else if (v == valid) {
+                for (int[] cell : validNeighbor) {
+                    setFixedCell(cell[0], cell[1], true); // gabole diubah ubah
+
+                }
+            }
+
+            // ini mau apply buat yang kalo ada clue sebelahan, terus selisih nya 3,
+            // bakal jadi item putih, sesuai yang di docs
+            // kalo misal nya ada di pojokan brrti ada kemungkinan apply yang beda 2,
+            // tinggal cek aja
+            // CEK KANAN
+            if (getClueAt(r, c + 1)!= null) {
+                Clue other = getClueAt(r, c + 1);
+                if (other.getCol() == cols - 1)
+                    diffXConstraint(other, clue, 2);
+                diffXConstraint(other, clue, 3);
+            }
+
+            // CEK KIRI
+            if (getClueAt(r, c - 1)!= null) {
+                Clue other = getClueAt(r, c - 1);
+                if (other.getCol() == 0)
+                    diffXConstraint(other, clue, 2);
+                diffXConstraint(other, clue, 3);
+            }
+
+            // CEK BAWAH
+            if (getClueAt(r + 1, c) != null) {
+                Clue other = getClueAt(r + 1, c);
+                if (other.getRow() == rows - 1)
+                    diffXConstraint(other, clue, 2);
+                diffXConstraint(other, clue, 3);
+            }
+
+            // CEK ATAS
+            if (getClueAt(r - 1, c) != null) {
+                Clue other = getClueAt(r - 1, c);
+                if (other.getRow() == 0)
+                    diffXConstraint(other, clue, 2);
+                diffXConstraint(other, clue, 3);
+            }
+        }
+    }
+
+    // ini buat ngecek ada berapa tetangga gtu, nanti dipake buat kasus kek yang 4
+    // di pojokan ato 6 di tepian, tinggal cek dia ada berapa tetangga valid
+    public List<int[]> getValidNeighbors(int row, int col) {
+        // array of integer cuma buat nyimpen row sama col aja, koordinat mana aja yang
+        // tetangga nya si cell tersebut
+        List<int[]> cells = new ArrayList<>();
+
+        for (int deltaR = -1; deltaR <= 1; deltaR++) {
+            for (int deltaC = -1; deltaC <= 1; deltaC++) {
+                int neighborR = row + deltaR;
+                int neighborC = col + deltaC;
+
+                if (isValidPosition(neighborR, neighborC)) {
+                    cells.add(new int[] { neighborR, neighborC });
+                }
+            }
+        }
+        return cells;
+    }
+
+    // function yang isinya ngefix in kalo misal nya ada beda 3 di kotak nya
+    // p.s. gatau ya harus di cek apa ngga, tapi kyknya gamungkin invalid si
+    // kotaknya kalo di set constraint gini, nanti di update lagi
+    private void diffXConstraint(Clue a, Clue b, int x) {
+        int valueA = a.getValue();
+        int valueB = b.getValue();
+
+        if (Math.abs(valueA - valueB) != x) // kalo ga beda 2/3 ternyata, yauda skip aja
+            return;
+
+        // biar ga diproses dua kali (A-B dan B-A), misal yang kirinya udah pernah,
+        // yauda yang kanan nya gamungkin di proses lg
+        if (a.getRow() > b.getRow()) // vertikal
+            return;
+        if (a.getRow() == b.getRow() && a.getCol() > b.getCol()) // horizontal
+            return;
+
+        // cari mana yang lebih kecil mana yang lebih gede
+        Clue small = valueA < valueB ? a : b;
+        Clue big = valueA > valueB ? a : b;
+
+        int rowBig = big.getRow();
+        int colBig = big.getCol();
+        int rowSmall = small.getRow();
+        int colSmall = small.getCol();
+
+        for (int i = -1; i <= 1; i++) {
+            int row, col;
+            // big di kanan, small di kirinya
+            if (colBig > colSmall) {
+                // set putih di kiri small
+                row = rowSmall + i;
+                col = colSmall - 1;
+                if (isValidPosition(row, col)) {
+                    setFixedCell(row, col, false);
+                }
+
+                // set item di kanan big
+                row = rowBig + i;
+                col = colBig + 1;
+                if (isValidPosition(row, col)) {
+                    setFixedCell(row, col, true);
+                }
+            }
+            // big di kiri, small di kanannya
+            else if (colBig < colSmall) {
+                // set putih di kanan small
+                row = rowSmall + i;
+                col = colSmall + 1;
+                if (isValidPosition(row, col)) {
+                    setFixedCell(row, col, false);
+                }
+
+                // set item di kiri big
+                row = rowBig + i;
+                col = colBig - 1;
+                if (isValidPosition(row, col)) {
+                    setFixedCell(row, col, true);
+                }
+            }
+            // big di bawah
+            else if (rowBig > rowSmall) {
+                // set putih di atas small
+                row = rowSmall - 1;
+                col = colSmall + i;
+                if (isValidPosition(row, col)) {
+                    setFixedCell(row, col, false);
+                }
+
+                // set item di bawah big
+                row = rowBig + 1;
+                col = colBig + i;
+                if (isValidPosition(row, col)) {
+                    setFixedCell(row, col, true);
+                }
+            }
+            // big di atas
+            else {
+                // set putih di bawah small
+                row = rowSmall + 1;
+                col = colSmall + i;
+                if (isValidPosition(row, col)) {
+                    setFixedCell(row, col, false);
+                }
+
+                // set item di atas big
+                row = rowBig - 1;
+                col = colBig + i;
+                if (isValidPosition(row, col)) {
+                    setFixedCell(row, col, true);
+                }
+            }
+        }
+    }
 }
