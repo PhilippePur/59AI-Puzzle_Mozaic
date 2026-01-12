@@ -5,21 +5,46 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/*
-kelas ini tuh fungsinya untuk membuat kombinasi pola-pola 3x3 mana saja yang valid buat jika ada clue N  
-kelas ini pakai pattern singleton karena hanya perlu 1 buah saja dan tidak perlu diinstansiasi ulang 
-
-*/
-
+/**
+ * {@code PatternCache} adalah kelas utilitas yang bertugas untuk
+ * menghasilkan dan menyimpan semua kombinasi pola 3x3 yang valid
+ * berdasarkan nilai clue (0–9).
+ * <p>
+ * Setiap pola direpresentasikan sebagai array boolean 2 dimensi 3x3, di mana
+ * {@code true} berarti sel yang ditandai warna hitam dan {@code false} berarti kosong atau sel berwarna putih
+ *  <p>
+ * Kelas ini menerapkan Singleton Pattern karena hanya dibutuhkan
+ * satu instance saja selama program berjalan. Semua pola akan
+ * diprekomputasi di awal agar akses berikutnya bersifat O(1).
+ */
 public class PatternCache {
+
+    /**
+     * Instance tunggal dari {@code PatternCache}.
+     */
     private static PatternCache instance;
+
+    /**
+     * cache yang memetakan nilai clue ke daftar pola 3x3 yang valid.
+     * Key berisi nilai clue (0–9)  
+     * Value berisi list pola boolean 3x3 yang jumlah {@code true}-nya sesuai clue
+     */
     private final Map<Integer, List<boolean[][]>> cache;
 
+    /**
+     * Konstruktor private untuk mencegah instansiasi langsung dan langsung melakukan precompute pola.
+     */
     private PatternCache() {
         cache = new HashMap<>();
         precomputePatterns();
     }
 
+    /**
+     * Mengembalikan instance tunggal dari {@code PatternCache}.
+     * Jika instance belum ada, maka akan dibuat terlebih dahulu.
+     *
+     * @return instance {@code PatternCache}
+     */
     public static PatternCache getInstance() {
         if (instance == null) {
             instance = new PatternCache();
@@ -27,9 +52,13 @@ public class PatternCache {
         return instance;
     }
 
-    // generate pola untuk semua kemungkinan angka clue (0 - 9)
-    // diprecompute biar kalau misal dipanggil-panggil lagi sama method lain jadinya
-    // O(1), tinggal liat hashmap
+    /**
+     * Melakukan precompute seluruh kombinasi pola 3x3
+     * untuk semua kemungkinan nilai clue (0 sampai 9).
+     * <p>
+     * Hasilnya disimpan ke dalam cache agar pemanggilan
+     * selanjutnya tidak perlu melakukan perhitungan ulang.
+     */
     private void precomputePatterns() {
         for (int k = 0; k <= 9; k++) {
             List<boolean[][]> patterns = new ArrayList<>();
@@ -38,8 +67,20 @@ public class PatternCache {
         }
     }
 
+    /**
+     * Menghasilkan seluruh kombinasi boolean 1D sepanjang 9 elemen
+     * yang memiliki jumlah {@code true} sesuai dengan targetCount
+     * <p>
+     * Metode ini menggunakan pendekatan rekursif dengan pruning
+     * untuk menghentikan cabang yang sudah tidak mungkin memenuhi target.
+     *
+     * @param current      array boolean sementara (1D)
+     * @param index        posisi yang sedang diproses
+     * @param targetCount  jumlah {@code true} yang diinginkan
+     * @param result       list hasil pola 3x3 yang valid
+     */
     private void generatePermutations(boolean[] current, int index, int targetCount, List<boolean[][]> result) {
-        // base casenya kalau 3 x 3 nya udah keisi semua
+        // base casenya adalah ketika seluruh sel sudah diproses
         if (index == 9) {
             if (countTrue(current) == targetCount) {
                 result.add(reshape3x3(current));
@@ -50,10 +91,11 @@ public class PatternCache {
         int currentCount = countTrue(current, index);
         int remainingSlots = 9 - index;
 
-        // kalau clue yang digenerate sudah ga mungkin untuk bisa memenuhi target count
+        // ketika tidak mungkin mencapai target maka akan dilakukan pruning 
         if (currentCount + remainingSlots < targetCount)
             return;
-        // kalau yang udah diitung sebagian ternyata melebihi target
+
+        // ketika jumlah true sudah melebihi target maka akan dilakukan pruning
         if (currentCount > targetCount)
             return;
 
@@ -64,7 +106,14 @@ public class PatternCache {
         generatePermutations(current, index + 1, targetCount, result);
     }
 
-    // untuk ngitung ada brp true di arr dengan limit (ngitungnya sebagian aja)
+    /**
+     * Menghitung jumlah nilai {@code true} pada array boolean
+     * hingga batas indeks tertentu.
+     *
+     * @param arr   array boolean
+     * @param limit batas indeks (eksklusif)
+     * @return jumlah elemen {@code true}
+     */
     private int countTrue(boolean[] arr, int limit) {
         int c = 0;
         for (int i = 0; i < limit; i++)
@@ -73,7 +122,12 @@ public class PatternCache {
         return c;
     }
 
-    // untuk ngitung ada brp true di arr
+    /**
+     * Menghitung jumlah nilai {@code true} pada seluruh array boolean.
+     *
+     * @param arr array boolean
+     * @return jumlah elemen {@code true}
+     */
     private int countTrue(boolean[] arr) {
         int c = 0;
         for (boolean b : arr)
@@ -82,9 +136,13 @@ public class PatternCache {
         return c;
     }
 
-    // convert dari array 1 dimensi ke 2 dimensi
-    // tujuannya sih buat lebih gampang pas bikin patternya di 1dimensi baru convert
-    // ke 2dimensi
+    /**
+     * Mengonversi array boolean 1 dimensi (panjang 9)
+     * menjadi array boolean 2 dimensi berukuran 3x3.
+     *
+     * @param flat array boolean 1D
+     * @return array boolean 3x3
+     */
     private boolean[][] reshape3x3(boolean[] flat) {
         boolean[][] grid = new boolean[3][3];
         for (int i = 0; i < 3; i++) {
@@ -93,10 +151,70 @@ public class PatternCache {
         return grid;
     }
 
-    // ini buat method lain manggil ini buat dapetin pattern yang valid
+    /**
+     * Mengembalikan daftar pola 3x3 yang valid
+     * berdasarkan nilai clue tertentu.
+     *
+     * @param value nilai clue (0–9)
+     * @return list pola boolean 3x3 yang valid,
+     *         atau list kosong jika nilai tidak valid
+     */
     public List<boolean[][]> getValidPatterns(int value) {
         if (value < 0 || value > 9)
             return new ArrayList<>();
         return cache.get(value);
+    }
+
+    /**
+     * Mengambil daftar pola yang valid untuk nilai clue tertentu, namun difilter
+     * berdasarkan kondisi sel yang sudah diketaui yang ditandai oleh isFixed.
+     * <p>
+     * Metode ini berfungsi untuk mutasi yang akan mengubah area 3x3 tetapi harus tetap menghormati sel yang sudah
+     * ditentukan oleh heuristik yang ditandai oleh isFixed.
+     * </p>
+     *
+     * @param value      nilai clue (target jumlah hitam)
+     * @param knownState array 3x3 yang berisi warna saat ini (hitam/putih)
+     * @param isKnown    array 3x3 mask, {@code true} jika sel tersebut fixed ,
+     * {@code false} jika sel tersebut bebas (boleh berbeda)
+     * @return List pola yang sesuai dengan clue DAN cocok dengan knownState pada posisi isKnown
+     */
+    public List<boolean[][]> getCompatiblePatterns(int value, boolean[][] knownState, boolean[][] isKnown) {
+        List<boolean[][]> allPatterns = getValidPatterns(value);
+        
+        if (allPatterns.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<boolean[][]> compatible = new ArrayList<>();
+
+        for (boolean[][] pattern : allPatterns) {
+            if (isPatternCompatible(pattern, knownState, isKnown)) {
+                compatible.add(pattern);
+            }
+        }
+
+        return compatible;
+    }
+
+    /**
+     * Memeriksa apakah sebuah pola kandidat cocok dengan state yang sudah diketahui.
+     *
+     * @param candidate  pola 3x3 yang sedang diperiksa
+     * @param knownState pola 3x3 referensi (state saat ini)
+     * @param isKnown    mask 3x3, true berarti posisi tersebut harus sama persis
+     * @return {@code true} jika pola kompatibel, {@code false} jika ada konflik pada posisi known
+     */
+    private boolean isPatternCompatible(boolean[][] candidate, boolean[][] knownState, boolean[][] isKnown) {
+        for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 3; c++) {
+                if (isKnown[r][c]) {
+                    if (candidate[r][c] != knownState[r][c]) {
+                        return false; 
+                    }
+                }
+            }
+        }
+        return true;
     }
 }
