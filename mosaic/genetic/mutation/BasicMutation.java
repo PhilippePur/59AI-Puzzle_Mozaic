@@ -4,13 +4,11 @@ import mosaic.puzzle.Individual;
 import mosaic.puzzle.Puzzle;
 import java.util.Random;
 
-
 public class BasicMutation implements MutationStrategy {
 
     private final double mutationRate;
     private final Random random;
 
-    
     public BasicMutation(double mutationRate, Random random) {
 
         this.mutationRate = mutationRate;
@@ -36,14 +34,11 @@ public class BasicMutation implements MutationStrategy {
             }
         }
 
-     
     }
 
     @Override
     public String getStrategyName() {
-       return "BasicMutation";
+        return "BasicMutation";
     }
-
-   
 
 }
