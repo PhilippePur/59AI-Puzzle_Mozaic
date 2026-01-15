@@ -1,4 +1,4 @@
-package mosaic.selection;
+package mosaic.genetic.selection;
 
 import java.util.List;
 import mosaic.puzzle.Individual;
