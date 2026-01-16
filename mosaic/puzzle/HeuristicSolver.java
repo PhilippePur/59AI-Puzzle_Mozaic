@@ -1,6 +1,5 @@
 package mosaic.puzzle;
 
-import java.util.List;
 
 /**
  * Kelas utilitas untuk menerapkan aturan heuristik logika pada Puzzle.
@@ -16,7 +15,7 @@ public class HeuristicSolver {
      * Menjalankan seluruh aturan heuristik pada puzzle.
      * Metode ini sebaiknya dipanggil satu kali sebelum inisialisasi populasi.
      * * @param puzzle Objek puzzle yang akan diproses
-     * 
+     * ;
      * @param limit batas maksimal iterasi pengisian inisialisasi awal, agar tidak
      *              terlalu lama
      *              jika -1 artinya tidak ada batasan, nilai harus positif
