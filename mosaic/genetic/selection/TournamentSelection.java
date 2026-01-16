@@ -1,5 +1,8 @@
+<<<<<<< HEAD:mosaic/genetic/selection/TournamentSelection.java
 package mosaic.genetic.selection;
 
+=======
+>>>>>>> b6ceb761bd511f48ba3cb310c568d496649b504a:mosaic/selection/TournamentSelection.java
 import java.util.List;
 import mosaic.puzzle.Individual;
 import mosaic.util.GlobalRandom;

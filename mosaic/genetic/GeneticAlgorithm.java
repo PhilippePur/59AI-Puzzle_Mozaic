@@ -147,16 +147,16 @@ public class GeneticAlgorithm {
                 // Crossover
                 Individual child;
                 if (rng.nextDouble() < crossoverRate) {
-                    child = crossoverStrategy.crossover(parent1, parent2, rng);
+                    // child = crossoverStrategy.crossover(parent1, parent2, rng);
                 } else {
-                    child = parent1.copy();
+                    // child = parent1.copy();
                 }
 
                 // Mutation
 
 
                 // Memasukkan anak yang sudah di mutasi ke dalam newPopulation
-                newPopulation.add(child);
+                // newPopulation.add(child);
             }
 
             population = newPopulation;
