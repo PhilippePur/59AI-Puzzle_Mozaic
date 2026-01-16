@@ -4,19 +4,21 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * {@code Individual} merepresentasikan satu individu atau solusi kandidat dalam populasi Algoritma Genetik.
+ * {@code Individual} merepresentasikan satu individu atau solusi kandidat dalam
+ * populasi Algoritma Genetik.
  * <p>
  * Kelas ini menggunakan representasi matriks 2D sebagai encoding genotipe,
  * di mana struktur gen memiliki ukuran yang sama persis dengan papan Mosaic.
- * Setiap gen secara langsung merepresentasikan koordinat (baris, kolom) dari papan.
+ * Setiap gen secara langsung merepresentasikan koordinat (baris, kolom) dari
+ * papan.
  * </p>
  * <p>
- * Individu memiliki referensi ke objek {@link Puzzle} untuk mengakses constrain 
+ * Individu memiliki referensi ke objek {@link Puzzle} untuk mengakses constrain
  * sel yang terkunci ({@code isFixed}), yang sudah diset melalui heuristik awal
  * </p>
  */
 public class Individual {
-    
+
     /**
      * Matriks boolean yang menyimpan warna sel (Genotipe).
      * <ul>
@@ -27,7 +29,7 @@ public class Individual {
     private boolean[][] grid;
 
     /**
-     * Referensi ke objek {@link Puzzle} yang merupakan soal dan juga 
+     * Referensi ke objek {@link Puzzle} yang merupakan soal dan juga
      * digunnakan untuk mengecek clue dan status sel yang terkunci (fixed).
      */
     private final Puzzle puzzle;
@@ -44,18 +46,22 @@ public class Individual {
      * <li>{@code true} = Genotipe telah berubah, fitness harus dihitung ulang.</li>
      * <li>{@code false} = Nilai fitness saat ini masih valid.</li>
      * </ul>
-     * Digunakan untuk optimasi agar tidak menghitung fitness berulang kali jika tidak perlu.
+     * Digunakan untuk optimasi agar tidak menghitung fitness berulang kali jika
+     * tidak perlu.
      */
-    private boolean fitnessDirty; 
+    private boolean fitnessDirty;
 
     /**
      * Konstruktor untuk menginisialisasi individu baru secara acak.
      * <p>
-     * Inisialisasi akan menghormati sel yang sudah berstatus <b>Fixed</b> di dalam {@code Puzzle}.
-     * Sel yang fixed akan mengambil nilai pasti dari puzzle, sedangkan sel sisanya akan diisi acak.
+     * Inisialisasi akan menghormati sel yang sudah berstatus <b>Fixed</b> di dalam
+     * {@code Puzzle}.
+     * Sel yang fixed akan mengambil nilai pasti dari puzzle, sedangkan sel sisanya
+     * akan diisi acak.
      * </p>
      * * @param puzzle referensi objek puzzle atau soal
-     * @param rng generator angka acak global 
+     * 
+     * @param rng generator angka acak global
      */
     public Individual(Puzzle puzzle, Random rng) {
         this.puzzle = puzzle;
@@ -118,6 +124,7 @@ public class Individual {
     /**
      * Mendapatkan status warna pada sel tertentu.
      * * @param r indeks baris sel
+     * 
      * @param c indeks kolom sel
      * @return {@code true} jika Hitam, {@code false} jika Putih
      */
@@ -126,9 +133,11 @@ public class Individual {
     }
 
     /**
-     * Memeriksa apakah sel tertentu sudah ditandai isFixed berdasarkan aturan heuristic Puzzle.
+     * Memeriksa apakah sel tertentu sudah ditandai isFixed berdasarkan aturan
+     * heuristic Puzzle.
      * Sel yang fixed tidak boleh dimutasi.
      * * @param r indeks baris sel
+     * 
      * @param c indeks kolom sel
      * @return {@code true} jika sel terkunci, {@code false} jika bebas
      */
@@ -166,7 +175,7 @@ public class Individual {
         }
         return copy;
     }
-    
+
     /**
      * Mendapatkan referensi ke objek Puzzle.
      * Berguna untuk komponen lain yang membutuhkan akses ke metadata soal.
@@ -179,11 +188,13 @@ public class Individual {
     /**
      * Mengubah nilai warna pada sel tertentu secara aman.
      * <p>
-     * Perubahan hanya akan diterapkan jika sel tersebut <b>TIDAK</b> berstatus fixed.
+     * Perubahan hanya akan diterapkan jika sel tersebut <b>TIDAK</b> berstatus
+     * fixed.
      * Jika terjadi perubahan, flag {@code fitnessDirty} akan diset ke true.
      * </p>
      * * @param r indeks baris sel
-     * @param c indeks kolom sel
+     * 
+     * @param c     indeks kolom sel
      * @param value nilai warna baru (true/false)
      */
     public void setCell(int r, int c, boolean value) {
@@ -191,7 +202,7 @@ public class Individual {
         if (puzzle.isFixed(r, c)) {
             return;
         }
-        
+
         // Hanya update jika nilai berbeda (optimasi)
         if (grid[r][c] != value) {
             grid[r][c] = value;
@@ -206,6 +217,7 @@ public class Individual {
      * Operasi ini diabaikan jika sel berstatus fixed.
      * </p>
      * * @param r indeks baris sel
+     * 
      * @param c indeks kolom sel
      */
     public void flipCell(int r, int c) {
@@ -217,8 +229,10 @@ public class Individual {
     }
 
     /**
-     * Menandai bahwa genotipe telah berubah dan nilai fitness saat ini sudah tidak valid (kadaluarsa).
-     * Fitness akan dihitung ulang pada pemanggilan {@link #getFitness()} berikutnya.
+     * Menandai bahwa genotipe telah berubah dan nilai fitness saat ini sudah tidak
+     * valid (kadaluarsa).
+     * Fitness akan dihitung ulang pada pemanggilan {@link #getFitness()}
+     * berikutnya.
      */
     public void markDirty() {
         this.fitnessDirty = true;
@@ -230,10 +244,12 @@ public class Individual {
      * Strategi perhitungan:
      * <ol>
      * <li>Iterasi setiap Clue yang ada di Puzzle.</li>
-     * <li>Hitung jumlah sel hitam aktual di area 3x3 sekitar Clue pada individu ini.</li>
+     * <li>Hitung jumlah sel hitam aktual di area 3x3 sekitar Clue pada individu
+     * ini.</li>
      * <li>Hitung selisih absolut (Error) antara jumlah aktual dan nilai Clue.</li>
      * <li>Akumulasikan total error.</li>
-     * <li>Normalisasi nilai fitness dengan rumus: {@code 1.0 / (1.0 + TotalError)}.</li>
+     * <li>Normalisasi nilai fitness dengan rumus:
+     * {@code 1.0 / (1.0 + TotalError)}.</li>
      * </ol>
      * </p>
      */
@@ -256,8 +272,10 @@ public class Individual {
     }
 
     /**
-     * Menghitung jumlah sel hitam dalam area 3x3 yang berpusat pada (centerR, centerC).
+     * Menghitung jumlah sel hitam dalam area 3x3 yang berpusat pada (centerR,
+     * centerC).
      * * @param centerR koordinat baris pusat
+     * 
      * @param centerC koordinat kolom pusat
      * @return jumlah sel hitam (range 0-9)
      */
@@ -279,7 +297,7 @@ public class Individual {
     /**
      * Membuat salinan dari individu ini.
      * <p>
-     * Metode ini digunakan untuk memastikan manipulasi 
+     * Metode ini digunakan untuk memastikan manipulasi
      * pada individu baru tidak merusak data individu lama.
      * </p>
      * * @return objek Individual baru yang identik secara data
@@ -297,7 +315,7 @@ public class Individual {
 
         return copy;
     }
-    
+
     /**
      * Representasi String dari grid individu untuk keperluan debugging.
      * <p>
@@ -311,16 +329,24 @@ public class Individual {
         StringBuilder sb = new StringBuilder();
         for (int r = 0; r < puzzle.getRows(); r++) {
             for (int c = 0; c < puzzle.getCols(); c++) {
-                if (puzzle.isFixed(r,c)) {
-                   // Tanda visual untuk sel yang dikunci heuristik
-                   sb.append(grid[r][c] ? "$" : "·"); 
+                if (puzzle.isFixed(r, c)) {
+                    // Tanda visual untuk sel yang dikunci heuristik
+                    sb.append(grid[r][c] ? "$" : "·");
                 } else {
-                   sb.append(grid[r][c] ? "#" : ".");
+                    sb.append(grid[r][c] ? "#" : ".");
                 }
                 sb.append(" ");
             }
             sb.append("\n");
         }
         return sb.toString();
+    }
+
+    /**
+     * Mengubah nilai fitness pada individu.
+     * * @param fitness nilai fitness baru yang akan menggantikan
+     */
+    public void setFitness(double fitness) {
+        this.fitness = fitness;
     }
 }
