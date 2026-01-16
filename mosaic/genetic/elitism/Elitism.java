@@ -1,4 +1,4 @@
-package mosaic;
+package mosaic.genetic.elitism;
 import java.util.*;
 
 import mosaic.puzzle.Individual;
