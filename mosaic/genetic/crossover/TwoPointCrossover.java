@@ -6,19 +6,17 @@ import mosaic.puzzle.Individual;
 import mosaic.util.GlobalRandom;
 
 /**
- * Implementasi konkrit dari CrossoverStrategy menggunakan One Point Crossover
+ * Implementasi konkrit dari CrossoverStrategy menggunakan Two Point Crossover
  * 2D
  * <p>
- * Pada Strategi ini, dipilih sebuah baris/kolom secara random, dengan jumlah x
- * (0 < x < n(panjang/lebar puzzle)) secara random, kemudian hasil crossover
- * akan mendapat baris/kolom 1 hingga x dari parent1, dan x+1 hingga n dari
- * parent2
+ * Pada Strategi ini, dipilih sebuah baris/kolom secara random, lalu dipilih dua
+ * titik potong secara acak (cutStart dan cutEnd) secara random. Block diantara
+ * 2 titik potong itu akan diwarisi ke child hasil crossover
  * </p>
  * 
  * @author Greg
  */
-public class OnePointCrossover implements CrossoverStrategy {
-
+public class TwoPointCrossover implements CrossoverStrategy {
     @Override
     public Individual crossover(Individual parent1, Individual parent2, Random rng) {
         int rows = parent1.getRows(); // panjang rows parent1
@@ -30,9 +28,10 @@ public class OnePointCrossover implements CrossoverStrategy {
 
         // kalo true, maka potong row, kalo false, potong cols
         if (slice) {
-            int cut = GlobalRandom.rdm.nextInt(rows - 1) + 1;
+            int cutStart = GlobalRandom.rdm.nextInt(rows / 2);
+            int cutEnd = GlobalRandom.rdm.nextInt(cutStart + 1, rows - 1);
 
-            for (int start = cut; start < rows; start++) {
+            for (int start = cutStart; start <= cutEnd; start++) {
                 for (int c = 0; c < cols; c++) {
                     if (!child.isFixed(start, c)) {
                         child.setCell(start, c, parent2.getCell(start, c));
@@ -40,9 +39,10 @@ public class OnePointCrossover implements CrossoverStrategy {
                 }
             }
         } else {
-            int cut = GlobalRandom.rdm.nextInt(cols - 1) + 1;
+            int cutStart = GlobalRandom.rdm.nextInt(cols / 2);
+            int cutEnd = GlobalRandom.rdm.nextInt(cutStart + 1, cols - 1);
 
-            for (int c = cut; c < cols; c++) {
+            for (int c = cutStart; c <= cutEnd; c++) {
                 for (int r = 0; r < rows; r++) {
                     if (!child.isFixed(r, c)) {
                         child.setCell(r, c, parent2.getCell(r, c));
