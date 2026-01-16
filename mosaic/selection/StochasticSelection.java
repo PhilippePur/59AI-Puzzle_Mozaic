@@ -4,6 +4,34 @@ import java.util.List;
 import mosaic.puzzle.Individual;
 import mosaic.util.GlobalRandom;
 
+/**
+ * Implementasi Stochastic Universal Sampling
+ * <p>
+ * Stochastic Universal Sampling dilakukan dengan menaruh beberapa "pointer" di
+ * sekitar roulette wheel, sehingga persebaran individu akan lebih merata dan
+ * stabil. Titik pointer awal akan dipilih secara acak dan sisanya mengikuti
+ * pointer + distance. Kemudian setiap pointer menunjuk individu yang akan
+ * dimasukkan ke dalam mating pool. Individu dengan fitness yang lebih besar
+ * memiliki wilayah yang lebih panjang pada garis fitness, sehingga memiliki
+ * peluang lebih besar untuk terpilih.
+ * </p>
+ * 
+ * <p>
+ * Kelebihan:
+ * <ul>
+ * <li>Low variance
+ * <li>Individu dominan lebih cenderung dapet jatah
+ * </ul>
+ * 
+ * Kekurangan:
+ * <ul>
+ * <li>tergantung fitness yang dominan
+ * </ul>
+ * </p>
+ * 
+ * @author Greg
+ */
+
 public class StochasticSelection {
     public static List<Individual> select(List<Individual> population, int poolNumber) {
         // ini bagian findPointers

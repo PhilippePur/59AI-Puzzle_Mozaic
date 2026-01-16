@@ -4,8 +4,45 @@ import java.util.Comparator;
 import java.util.List;
 
 import mosaic.puzzle.Individual;
-import mosaic.util.GlobalRandom;
 
+/**
+ * Implementasi linear rank selection
+ * <p>
+ * Linear rank selection dilakukan dengan membuat ranking dari setiap individu
+ * di populasi berdasarkan nilai fitness nya, kemudian di konversi menjadi
+ * fitness baru dengan selective pressure tertentu. Selective pressure
+ * mengontrol tingkat dominasi individu terbaik dalam proses seleksi. Semakin
+ * besar nilai selective pressure, semakin besar peluang individu
+ * dengan ranking tinggi untuk terpilih.
+ * </p>
+ * <p>
+ * Setelah fitness ranking baru telah dihhitung, maka akan dilakukan selection
+ * dengan Stochastic Selection
+ * </p>
+ * 
+ * Selective pressure berada pada rentang [1.0 - 2.0], dimana (secara umum):
+ * <ul>
+ * <li>1.0 : seleksi bersifat acak</li>
+ * <li>1.5 : tekanan seleksi seimbang</li>
+ * <li>2.0 : tekanan seleksi maksimum (individu dengan fitness terbesar akan
+ * diberikan kesempatan terpilih lebih besar</li>
+ * </ul>
+ * 
+ * <p>
+ * Kelebihan:
+ * <ul>
+ * <li>Mengatasi masalah dominasi fitness tinggi, karna fitness berdasarkan rank
+ * <li>Bisa mengatur selection pressure
+ * </ul>
+ * 
+ * Kekurangan:
+ * <ul>
+ * <li>Perlu Sorting
+ * </ul>
+ * </p>
+ * 
+ * @author Greg
+ */
 public class LinearRankSelection {
     public static List<Individual> select(List<Individual> population, double selectivePressure, int poolNumber) {
 

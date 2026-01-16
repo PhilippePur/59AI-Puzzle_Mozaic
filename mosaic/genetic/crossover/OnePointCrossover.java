@@ -7,10 +7,12 @@ import mosaic.util.GlobalRandom;
 
 /**
  * Implementasi konkrit dari CrossoverStrategy menggunakan One Point Crossover
+ * <p>
  * Pada Strategi ini, dipilih sebuah baris/kolom secara random, dengan jumlah x
  * (0 < x < n(panjang/lebar puzzle)) secara random, kemudian hasil crossover
- * akan
- * mendapat baris/kolom 1 hingga x dari parent1, dan x+1 hingga n dari parent2
+ * akan mendapat baris/kolom 1 hingga x dari parent1, dan x+1 hingga n dari
+ * parent2
+ * </p>
  * 
  * @author Greg
  */
