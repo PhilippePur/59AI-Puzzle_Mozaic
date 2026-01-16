@@ -153,7 +153,7 @@ public class GeneticAlgorithm {
                 }
 
                 // Mutation
-
+                applyMutation(child);
 
                 // Memasukkan anak yang sudah di mutasi ke dalam newPopulation
                 newPopulation.add(child);
