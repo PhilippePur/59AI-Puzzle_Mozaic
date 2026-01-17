@@ -34,8 +34,15 @@ import mosaic.util.GlobalRandom;
  * @author Greg
  */
 
-public class StochasticSelection {
-    public static List<Individual> select(List<Individual> population, int poolNumber) {
+public class StochasticSelection implements SelectionStrategy {
+
+    private final int poolNumber;
+
+    public StochasticSelection(int poolNumber) {
+        this.poolNumber = poolNumber;
+    }
+
+    public List<Individual> select(List<Individual> population) {
         // ini bagian findPointers
         List<Individual> matingPool = new ArrayList<>();
         int size = population.size();
@@ -44,11 +51,11 @@ public class StochasticSelection {
             totalFitness += population.get(i).getFitness();
         }
 
-        double dist = totalFitness / poolNumber;
+        double dist = totalFitness / this.poolNumber;
         double start = GlobalRandom.rdm.nextDouble(dist);
 
-        double[] pointers = new double[poolNumber];
-        for (int i = 0; i < poolNumber; i++) {
+        double[] pointers = new double[this.poolNumber];
+        for (int i = 0; i < this.poolNumber; i++) {
             pointers[i] = start + i * dist;
         }
 
