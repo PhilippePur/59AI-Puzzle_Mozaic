@@ -45,8 +45,17 @@ import mosaic.puzzle.Individual;
  * 
  * @author Greg
  */
-public class LinearRankSelection {
-    public static List<Individual> select(List<Individual> population, double selectivePressure, int poolNumber) {
+public class LinearRankSelection implements SelectionStrategy {
+
+    private final int selectivePressure;
+    private final int poolNumber;
+
+    public LinearRankSelection(int selectivePressure, int poolNumber) {
+        this.selectivePressure = selectivePressure;
+        this.poolNumber = poolNumber;
+    }
+
+    public List<Individual> select(List<Individual> population) {
 
         // Linear Rank dari populasi, lalu dipilih hasil population baru menggunakan SUS
         List<Individual> sorted = new ArrayList<>(population);
@@ -64,10 +73,12 @@ public class LinearRankSelection {
         for (int i = 0; i < size; i++) {
             int pos = i;
 
-            fitnessRank = 2 - selectivePressure + 2 * (selectivePressure - 1) * (pos - 1) / (size - 1);
+            fitnessRank = 2 - this.selectivePressure + 2 * (this.selectivePressure - 1) * (pos - 1) / (size - 1);
             sorted.get(i).setFitness(fitnessRank); // overwrite fitness
         }
 
-        return StochasticSelection.select(sorted, poolNumber);
+        StochasticSelection selector = new StochasticSelection(this.poolNumber);
+
+        return selector.select(sorted);
     }
 }

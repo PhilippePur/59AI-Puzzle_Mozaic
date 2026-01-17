@@ -31,8 +31,27 @@ import mosaic.util.GlobalRandom;
  * @author Greg
  */
 
-public class TruncationSelection {
-  public static Individual select(List<Individual> population, int portion) {
+public class TruncationSelection implements SelectionStrategy {
+
+  private final int portion;
+  private final int poolNumber;
+
+  public TruncationSelection(int portion, int poolNumber) {
+    this.portion = portion;
+    this.poolNumber = poolNumber;
+  }
+
+  public List<Individual> select(List<Individual> population) {
+    List<Individual> matingPool = new ArrayList<>();
+
+    for (int i = 0; i < poolNumber; i++) {
+      matingPool.add(get(population));
+    }
+
+    return matingPool;
+  }
+
+  public Individual get(List<Individual> population) {
     List<Individual> sorted = new ArrayList<>(population);
 
     Collections.sort(sorted, new Comparator<Individual>() {
@@ -42,7 +61,7 @@ public class TruncationSelection {
       }
     });
 
-    int truncate = Math.max(1, (int) Math.floor(population.size() * (portion / 100.0)));
+    int truncate = Math.max(1, (int) Math.floor(population.size() * (this.portion / 100.0)));
     Individual parent = sorted.get(GlobalRandom.rdm.nextInt(truncate));
 
     return parent.copy();
