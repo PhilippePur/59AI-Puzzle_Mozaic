@@ -1,27 +1,47 @@
+
+
+
+
+
 package mosaic.genetic;
 
-import mosaic.genetic.elitism.*;
 import mosaic.genetic.crossover.CrossoverStrategy;
 import mosaic.genetic.crossover.UniformCrossover;
+import mosaic.genetic.elitism.Elitism;
 import mosaic.genetic.mutation.*;
+import mosaic.genetic.selection.TournamentSelection;
 import mosaic.puzzle.*;
-import mosaic.genetic.selection.*;
+import mosaic.util.GlobalRandom;
 import java.util.*;
 
 /**
- * Mesin utama Algoritma Genetik.
- * <p>
- * Kelas ini mengelola siklus hidup evolusi populasi mulai dari inisialisasi,
- * evaluasi fitness, seleksi, crossover, hingga mutasi.
- * Menggunakan instance {@link Random} yang diinjeksi untuk mendukung eksekusi paralel yang aman (thread-safe).
+ * Kelas yang menjalankan proses Genetic Algorithm untuk menyelesaikan puzzle
+ * Kelas ini memungkinkan algoritma menggunakan metode dan parameter yang
+ * berbeda untuk eksperimen
+ * 
+ * @author Andrew, Michael G, Michael Philippe
  */
 public class GeneticAlgorithm {
+    /**
+     * Konfigurasi parameter
+     */
     private final int populationSize;
     private final int maxGenerations;
     private final double crossoverRate;
+    private final double mutationRate;
     private final int eliteCount;
+
+    /**
+     * Metode metode yang digunakan untuk mutasi
+     */
     private final MutationStrategy mutationStrategy;
     private final CrossoverStrategy crossoverStrategy;
+
+    /**
+     * variable yang digunakan untuk menyimpan state evolusi
+     * seperti population yg menyimpan individu dalam populasi saat ini,
+     * currentGeneration yg mencatat saat ini sedang berada di proses generasi keberapa, dll
+     */
     private final Random rng;
     private List<Individual> population;
     private final Puzzle puzzle;
@@ -31,121 +51,35 @@ public class GeneticAlgorithm {
     private double avgFitness;
 
     /**
-     * Inisialisasi engine Algoritma Genetik dengan konfigurasi lengkap.
-     *
-     * @param rng objek Random spesifik (penting untuk isolasi thread pada eksperimen paralel)
+     * Konstruktor untuk inisialisasi Genetic Algorithm. 
+     * Dapat dipanggil melalui kelas main / kelas experimen dengan memasukkan parameter konfigurasi yang beragam
+     * @param puzzle menyimpan informasi context masalah Mosaic
+     * @param rng generator angka acak global
+     * @param popSize ukuran populasi
+     * @param maxGen jumlah maksimal generasi
+     * @param crossoverRate probabilitas crossover
+     * @param mutationRate probabilitas mutasi
+     * @param eliteCount jumlah individu elit yg akan dipilih untuk dipertahankan
+     * @param crossover metode crossover konkrit yang digunakan
+     * @param mutation metode mutasi konkrit yang digunakan
      */
-    public GeneticAlgorithm(int popSize, int maxGen, double crossoverRate, int eliteCount,
-            MutationStrategy mutationStrategy, CrossoverStrategy crossoverStrategy, 
-            Puzzle puzzle, Random rng) {
+    public GeneticAlgorithm(Puzzle puzzle, Random rng, int popSize, int maxGen, 
+        double crossoverRate, double mutationRate, int eliteCount, CrossoverStrategy crossover,
+        MutationStrategy mutation) {
+        this.puzzle = puzzle;
+        this.rng = rng;
         this.populationSize = popSize;
         this.maxGenerations = maxGen;
         this.crossoverRate = crossoverRate;
+        this.mutationRate = mutationRate;
         this.eliteCount = eliteCount;
-        this.mutationStrategy = mutationStrategy;
-        this.crossoverStrategy = crossoverStrategy;
-        this.puzzle = puzzle;
-        this.rng = rng;
-
+        this.crossoverStrategy = crossover;
+        this.mutationStrategy = mutation;
+       
+        // Inisialisasi array list kosong untuk menyimpan populasi
         this.population = new ArrayList<>();
         this.currentGeneration = 0;
         this.bestFitness = 0.0;
-    }
-
-    /**
-     * Konstruktor overaloading dengan default Uniform Crossover.
-     */
-    public GeneticAlgorithm(int popSize, int maxGen, double crossoverRate, int eliteCount,
-            MutationStrategy mutationStrategy, Puzzle puzzle, Random rng) {
-        this(popSize, maxGen, crossoverRate, eliteCount, mutationStrategy, new UniformCrossover(), puzzle, rng);
-    }
-
-    /**
-     * Menjalankan loop evolusi hingga kriteria berhenti terpenuhi (solusi ditemukan atau batas generasi).
-     *
-     * @return Individu terbaik yang ditemukan pada akhir proses.
-     */
-    public Individual run() {
-        initPopulation();
-        
-        while (currentGeneration < maxGenerations) {
-            calculatePopulationStats();
-            
-            // Berhenti jika solusi optimal (fitness 1.0) ditemukan
-            if (Math.abs(bestFitness - 1.0) < 0.000001) {
-                break;
-            }
-
-            population = evolve();
-            currentGeneration++;
-        }
-        
-        calculatePopulationStats(); // Update statistik akhir
-        return bestIndividual;
-    }
-
-    /**
-     * Membangkitkan populasi awal secara acak (namun tetap menghormati sel yang dikunci/fixed).
-     */
-    private void initPopulation() {
-        for (int i = 0; i < populationSize; i++) {
-            Individual ind = new Individual(puzzle, rng);
-            ind.calculateFitness();
-            population.add(ind);
-        }
-    }
-
-    /**
-     * Membentuk generasi baru melalui proses Elitism, Seleksi, Crossover, dan Mutasi.
-     */
-    private List<Individual> evolve() {
-        List<Individual> newPopulation = new ArrayList<>();
-
-        // 1. Elitism: Pertahankan individu terbaik
-        List<Individual> elites = applyElitism();
-        newPopulation.addAll(elites);
-
-        // 2. Reproduksi sisa populasi
-        while (newPopulation.size() < populationSize) {
-            Individual p1 = selectParent();
-            Individual p2 = selectParent();
-
-            Individual offspring;
-            if (rng.nextDouble() < crossoverRate) {
-                offspring = crossoverStrategy.crossover(p1, p2, rng);
-            } else {
-                offspring = p1.copy();
-            }
-
-            applyMutation(offspring);
-            
-            offspring.calculateFitness();
-            newPopulation.add(offspring);
-        }
-
-        return newPopulation;
-    }
-
-    /**
-     * Memilih parent menggunakan Tournament Selection lokal.
-     */
-    private Individual selectParent() {
-        int k = 5; // Ukuran turnamen
-        Individual best = null;
-        for (int i = 0; i < k; i++) {
-            Individual ind = population.get(rng.nextInt(population.size()));
-            if (best == null || ind.getFitness() > best.getFitness()) {
-                best = ind;
-            }
-        }
-        return best.copy();
-    }
-
-    /**
-     * Mengambil N individu terbaik dari populasi saat ini.
-     */
-    private List<Individual> applyElitism() {
-        return Elitism.selectElite(population, eliteCount);
     }
 
     /**
@@ -153,42 +87,29 @@ public class GeneticAlgorithm {
      * Juga memperbarui statistik populasi jika menggunakan Adaptive Mutation.
      */
     private void applyMutation(Individual individual) {
+        // Jika mutationStrategy adalah AdaptiveMutation, update info
         if (mutationStrategy instanceof AdaptiveMutation) {
             AdaptiveMutation adaptive = (AdaptiveMutation) mutationStrategy;
             adaptive.updatePopulationInfo(currentGeneration, avgFitness, calculateDiversity());
         }
+
+        // pake mutationStrategy.mutate() dari interface
         mutationStrategy.mutate(individual, puzzle);
+        individual.calculateFitness();
     }
 
-    /**
-     * Menghitung statistik fitness (terbaik dan rata-rata) populasi saat ini.
-     */
-    private void calculatePopulationStats() {
-        double totalFit = 0;
-        bestFitness = -1.0;
-        bestIndividual = null;
 
-        for (Individual ind : population) {
-            double fit = ind.getFitness();
-            totalFit += fit;
-            if (fit > bestFitness) {
-                bestFitness = fit;
-                bestIndividual = ind;
-            }
-        }
-        if (!population.isEmpty()) avgFitness = totalFit / population.size();
-    }
-    
-    public int getCurrentGeneration() { return currentGeneration; }
-    public double getBestFitness() { return bestFitness; }
-    
     /**
      * Menghitung diversitas populasi berdasarkan perbedaan gen antara dua individu sampel.
      */
     private double calculateDiversity() {
-        if (population.size() < 2) return 0.0;
+        // Cara sederhana: hitung persentase gen yang berbeda
+        if (population.size() < 2)
+            return 1.0;
         int totalNonFixedCells = 0;
         int differences = 0;
+        
+        // Bandingkan individu pertama dengan kedua
         Individual first = population.get(0);
         Individual second = population.get(1);
 
@@ -196,13 +117,15 @@ public class GeneticAlgorithm {
             for (int c = 0; c < first.getCols(); c++) {
                 if (!first.isFixed(r, c)) {
                     totalNonFixedCells++;
-                    if (first.getCell(r, c) != second.getCell(r, c)) {
+                    if (first.getGrid()[r][c] != second.getGrid()[r][c]) {
                         differences++;
                     }
                 }
             }
         }
-        if (totalNonFixedCells == 0) return 0.0;
+
+        if (totalNonFixedCells == 0)
+            return 0.0;
         return (double) differences / totalNonFixedCells;
     }
 
@@ -214,15 +137,15 @@ public class GeneticAlgorithm {
         // Inisialisasi populasi awal
         initializePopulation();
 
-        // Looping untuk setiap generasi proses evolusi
-        // Berhenti jika mencapai maxGenerations atau ketika sudah ditemukan solusi sempurna (fitness = 1.0)
-        while (currentGeneration < maxGenerations || bestFitness != 1.0) {
-            // Sorting individu dalam populasi berdasarkan fitness individu (mulai dari terbesar ke terkecil)
-            Collections.sort(population, (a, b) ->
-                Double.compare(b.getFitness(), a.getFitness()));
+        // Evaluasi awal
+        Collections.sort(population, (a, b) -> Double.compare(b.getFitness(), a.getFitness()));
+        bestIndividual = population.get(0).copy();
+        bestFitness = bestIndividual.getFitness();
 
-            // Cek apakah solusi sempurna ditemukan (fitness = 1.0), jika ya maka langsung keluar dari loop
-            if (population.get(0).getFitness() == 1.0) break;
+        // Looping untuk setiap generasi proses evolusi
+        // Berhenti jika mencapai maxGenerations atau ketika sudah ditemukan solusi
+        // sempurna (fitness = 1.0)
+        while (currentGeneration < maxGenerations && bestFitness < 1.0) {
 
             // Membuat generasi baru
             List<Individual> newPopulation = new ArrayList<>();
@@ -233,31 +156,46 @@ public class GeneticAlgorithm {
 
             // Pembuatan anak sampai newPopulation = populationSize
             while (newPopulation.size() < populationSize) {
-                // Parent Selection (pilih 2 parent) -- Kalo selection udah fix isi bagian ini
-                // ....
+                // Parent Selection (pilih 2 parent)
+                Individual parent1 = TournamentSelection.select(population, 5);
+                Individual parent2 = TournamentSelection.select(population, 5);
 
                 // Crossover
                 Individual child;
                 if (rng.nextDouble() < crossoverRate) {
-                    // child = crossoverStrategy.crossover(parent1, parent2, rng);
+                    child = crossoverStrategy.crossover(parent1, parent2, rng);
                 } else {
-                    // child = parent1.copy();
+                    child = parent1.copy();
                 }
 
                 // Mutation
-
+                applyMutation(child);
 
                 // Memasukkan anak yang sudah di mutasi ke dalam newPopulation
-                // newPopulation.add(child);
+                newPopulation.add(child);
             }
 
             population = newPopulation;
             currentGeneration++;
+
+            // Evaluasi populasi baru
+            Collections.sort(population, (a, b) -> Double.compare(b.getFitness(), a.getFitness()));
+            Individual currentBest = population.get(0);
+
+            // Update Global Best jika ditemukan yang lebih baik
+            if (currentBest.getFitness() > bestFitness) {
+                bestFitness = currentBest.getFitness();
+                bestIndividual = currentBest.copy();
+            }
         }
 
-        Collections.sort(population, (a, b) ->
-                Double.compare(b.getFitness(), a.getFitness()));
-        return population.get(0);
+        // Final sorting dan check
+        Collections.sort(population, (a, b) -> Double.compare(b.getFitness(), a.getFitness()));
+        if (population.get(0).getFitness() > bestFitness) {
+            bestIndividual = population.get(0).copy();
+        }
+
+        return bestIndividual;
     }
 
     /**
