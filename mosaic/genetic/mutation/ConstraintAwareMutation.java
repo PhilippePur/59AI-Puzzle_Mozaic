@@ -26,25 +26,69 @@ public class ConstraintAwareMutation implements MutationStrategy {
     public void mutate(Individual individual, Puzzle puzzle) {
         List<Clue> problematicClues = findProblematicClues(individual, puzzle);
 
-        if (problematicClues.isEmpty()) {// ini gw pgnnya gausa di mutate lagi kan udh bnr smua tapi gatau boleh ga
-
+        if (problematicClues.isEmpty()) {
             fallbackBasicMutation(individual);
             return;
         }
 
         Clue selectedClue = selectClueToFix(problematicClues);
-        List<boolean[][]> validPatterns = patternCache.getValidPatterns(selectedClue.getValue());
+        int centerR = selectedClue.getRow();
+        int centerC = selectedClue.getCol();
 
-        if (validPatterns.isEmpty()) {
+        // Get current state of 3x3 area
+        boolean[][] currentState = get3x3State(individual, centerR, centerC);
+        boolean[][] isFixed = get3x3FixedMask(individual, centerR, centerC);
+
+        // Get COMPATIBLE patterns (respecting fixed cells)
+        List<boolean[][]> compatiblePatterns = patternCache.getCompatiblePatterns(selectedClue.getValue(),currentState,isFixed);
+
+        if (compatiblePatterns.isEmpty()) {
             fallbackBasicMutation(individual);
             return;
         }
 
-        // Pilih pattern yang berbeda dengan current state
-        boolean[][] newPattern = selectNewPattern(validPatterns, individual, selectedClue);
+        boolean[][] newPattern = selectNewPattern(compatiblePatterns, individual, selectedClue);
         applyPatternToArea(individual, selectedClue, newPattern);
 
         individual.markDirty(); // Tandai bahwa fitness perlu dihitung ulang
+    }
+
+    /**
+     * Mengambil state 3x3 dari individual pada area seputar centerR, centerC.
+     * Sel yang berada di luar batas papan dibiarkan false (default).
+     */
+    private boolean[][] get3x3State(Individual individual, int centerR, int centerC) {
+        boolean[][] state = new boolean[3][3];
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                int r = centerR + dr;
+                int c = centerC + dc;
+                if (r >= 0 && r < individual.getRows() && c >= 0 && c < individual.getCols()) {
+                    state[dr + 1][dc + 1] = individual.getCell(r, c);
+                }
+                // Sel di luar batas tetap false (default value untuk boolean array)
+            }
+        }
+        return state;
+    }
+
+    /**
+     * Mengambil mask fixed 3x3 dari individual pada area seputar centerR, centerC.
+     * Sel yang berada di luar batas papan dibiarkan false (tidak fixed, karena tidak ada).
+     */
+    private boolean[][] get3x3FixedMask(Individual individual, int centerR, int centerC) {
+        boolean[][] isFixed = new boolean[3][3];
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                int r = centerR + dr;
+                int c = centerC + dc;
+                if (r >= 0 && r < individual.getRows() && c >= 0 && c < individual.getCols()) {
+                    isFixed[dr + 1][dc + 1] = individual.isFixed(r, c);
+                }
+                // Sel di luar batas tetap false (tidak ada sel, jadi tidak fixed)
+            }
+        }
+        return isFixed;
     }
 
     private List<Clue> findProblematicClues(Individual individual, Puzzle puzzle) {
