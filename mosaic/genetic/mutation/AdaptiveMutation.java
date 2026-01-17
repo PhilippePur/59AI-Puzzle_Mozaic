@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.ArrayList;
 import mosaic.util.GlobalRandom;
 
+
 public class AdaptiveMutation implements MutationStrategy {
 
     private final List<MutationStrategy> availableStrategies;
@@ -14,6 +15,7 @@ public class AdaptiveMutation implements MutationStrategy {
     private int currentGeneration;
     private double averageFitness;
     private double diversity;
+
 
     public AdaptiveMutation(List<MutationStrategy> strategies) {
 
@@ -23,6 +25,7 @@ public class AdaptiveMutation implements MutationStrategy {
         this.diversity = 1.0;
         this.random = GlobalRandom.rdm;
     }
+
 
     public void updatePopulationInfo(int generation, double avgFitness, double diversity) {
         this.currentGeneration = generation;
@@ -58,9 +61,9 @@ public class AdaptiveMutation implements MutationStrategy {
     }
 
     private MutationStrategy selectForBalancedPhase() {
-        double rand = random.nextDouble();
+        double rand = random.nextDouble(); 
 
-        if (rand < 0.5) { // EXPERIMENT
+        if (rand < 0.5) { //EXPERIMENT
             return findStrategyByName("ConstraintAwareMutation");
         } else {
             return findStrategyByName("BasicMutation");
@@ -68,12 +71,12 @@ public class AdaptiveMutation implements MutationStrategy {
     }
 
     private MutationStrategy selectForExploitationPhase() {
-        if (averageFitness > 0.8) { // EXPERIMEENT
+        if (averageFitness > 0.8) { //EXPERIMEENT
             return findStrategyByName("ConstraintAwareMutation");
         } else {
-            double rand = random.nextDouble();
+            double rand = random.nextDouble(); 
 
-            if (rand < 0.5) {// EXPERIMENT
+            if (rand < 0.5) {//EXPERIMENT
                 return findStrategyByName("ConstraintAwareMutation");
             } else {
                 return findStrategyByName("BasicMutation");
@@ -91,12 +94,15 @@ public class AdaptiveMutation implements MutationStrategy {
         return availableStrategies.get(0);
     }
 
+    
+
     public int getStrategyCount() {
         return availableStrategies.size();
     }
 
+
     @Override
     public String getStrategyName() {
-        return "AdaptiveMutation";
+       return "AdaptiveMutation";
     }
 }

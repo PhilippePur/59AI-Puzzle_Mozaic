@@ -255,12 +255,16 @@ public class Individual {
      * {@code 1/(1+Error)} yang menyebabkan perbedaan fitness menjadi terlalu kecil
      * ketika error masih besar, sehingga memperlambat konvergensi di awal.
      * </p>
-     */
-    public void calculateFitness() {
-        double totalError = 0.0;
-        List<Clue> clues = puzzle.getClues();
+    */
+   public void calculateFitness() {
+       double totalError = 0.0;
+       List<Clue> clues = puzzle.getClues();
+       
+       
+       // Hitung Estimasi Maksimal Error yang mungkin terjadi (Worst Case)
+       double maxPossibleError = 0.0;
 
-        // Hitung akumulasi error dari seluruh clue
+       // Hitung akumulasi error dari seluruh clue
         for (Clue currentClue : clues) {
             int row = currentClue.getRow();
             int col = currentClue.getCol();
@@ -271,12 +275,10 @@ public class Individual {
 
             // Tambahkan selisih absolut ke total error
             totalError += Math.abs(blackCount - clueValue);
+
+            maxPossibleError += Math.max(Math.abs(9 - clueValue), Math.abs(clueValue - 0));
         }
 
-        // Hitung Estimasi Maksimal Error yang mungkin terjadi (Worst Case)
-        // Asumsi terburuk adalah setiap clue meleset maksimal 9 poin (misal clue 0 tapi ada 9
-        // hitam)
-        double maxPossibleError = clues.size() * 9.0;
 
         if (maxPossibleError == 0) {
             this.fitness = 1.0;

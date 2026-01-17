@@ -12,53 +12,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Kelas utama (Main Class) untuk menjalankan Solver Mosaic Puzzle.
+ * Kelas utama (Main Class) untuk eksekusi tunggal Solver Mosaic Puzzle.
  * <p>
- * Kelas ini bertanggung jawab untuk:
- * <ol>
- * <li>Membaca file input yang berisi definisi puzzle dan hiperparameter Algoritma Genetik.</li>
- * <li>Menginisialisasi objek {@link Puzzle} dan mengisi Clue.</li>
- * <li>Menjalankan {@link HeuristicSolver} untuk deduksi awal (pre-processing).</li>
- * <li>Mengonfigurasi dan menjalankan {@link GeneticAlgorithm}.</li>
- * <li>Menampilkan hasil akhir ke konsol.</li>
- * </ol>
- * </p>
- *
- * <h3>Spesifikasi Format File Input (.txt):</h3>
- * <pre>
- * Baris 1: [Rows] [Cols]
- * Baris 2: [Seed]
- * Baris 3: [PopulationSize] [MaxGenerations] [CrossoverRate] [EliteCount] [MutationType]
- * Baris 4+: [Grid Data...]
- * </pre>
- *
- * <p><b>Keterangan Parameter:</b></p>
+ * Bertanggung jawab untuk:
  * <ul>
- * <li><b>Rows, Cols:</b> Dimensi papan permainan (Integer).</li>
- * <li><b>Seed:</b> Angka untuk Random Number Generator (Long).</li>
- * <li><b>MutationType:</b> String (contoh: "basic", "adaptive", "constraint").</li>
- * <li><b>Grid Data:</b> Matriks angka dipisahkan spasi. Gunakan -1 atau '.' untuk sel kosong, dan 0-9 untuk clue.</li>
+ * <li>Membaca konfigurasi puzzle dan parameter GA dari file input.</li>
+ * <li>Menjalankan heuristik awal (pre-processing) untuk deduksi logika.</li>
+ * <li>Menginisialisasi dan menjalankan {@link GeneticAlgorithm}.</li>
+ * <li>Menampilkan metrik hasil akhir ke konsol.</li>
  * </ul>
- *
- * <p><b>Contoh Input:</b></p>
- * <pre>
- * 5 5
- * 12345
- * 200 1000 0.9 4 adaptive
- * -1 -1 4 -1 -1
- * -1 6 -1 6 -1
- * -1 -1 9 -1 -1
- * -1 6 -1 6 -1
- * -1 -1 4 -1 -1
- * </pre>
  */
 public class Mosaic {
 
     /**
-     * Metode utama aplikasi.
+     * Membaca file, melakukan seeding random global, menjalankan heuristik, dan memicu evolusi GA.
      *
-     * @param args argumen baris perintah. argumen pertama diharapkan adalah path ke file input.
-     * Jika kosong, akan default ke "puzzle_input.txt".
+     * @param args argumen baris perintah; args[0] adalah path file input (opsional).
      */
     public static void main(String[] args) {
         String filename = (args.length > 0) ? args[0] : "puzzle_input.txt";
@@ -66,24 +35,22 @@ public class Mosaic {
         System.out.println("Membaca file input: " + filename);
 
         try {
-            // 1. Parsing File Input & Inisialisasi Puzzle
+            // Parsing File Input & Inisialisasi Puzzle
             SolverConfig config = parseInputFile(filename);
             Puzzle puzzle = config.puzzle;
 
-            // Set Seed Global untuk Reproducibility
-            // PENTING: Seed ini menjamin bahwa seluruh proses di bawah ini dapat diulang persis sama.
+            // Set Seed Global agar hasil eksekusi ini deterministik (dapat direproduksi)
             GlobalRandom.rdm.setSeed(config.seed);
             System.out.println("Seed diset ke: " + config.seed);
 
             System.out.printf("Puzzle dimuat: %dx%d dengan %d clues.\n",
                     puzzle.getRows(), puzzle.getCols(), puzzle.getClues().size());
 
-            // 2. Deduksi Awal (Heuristic Pre-processing)
+            // Deduksi Awal (Heuristic Pre-processing)
             System.out.println("\n--- TAHAP 1: HEURISTIC SOLVER ---");
             long startHeuristic = System.currentTimeMillis();
             
-            // Memanggil HeuristicSolver untuk mengunci sel-sel yang pasti
-            // Menggunakan limit -1 (tanpa batas iterasi)
+            // Mengunci sel-sel yang solusinya sudah pasti secara logika
             int fixedCells = HeuristicSolver.applyHeuristics(puzzle, -1);
             
             long endHeuristic = System.currentTimeMillis();
@@ -91,23 +58,20 @@ public class Mosaic {
             System.out.printf("Status: %d sel berhasil dikunci (%.2f%% dari total papan).\n", 
                     fixedCells, (double) fixedCells / (puzzle.getRows() * puzzle.getCols()) * 100);
 
-            // 3. Persiapan Algoritma Genetik
+            // Persiapan Algoritma Genetik
             System.out.println("\n--- TAHAP 2: GENETIC ALGORITHM ---");
             
-            // Setup Strategi Mutasi menggunakan Factory
             Map<String, Object> mutationParams = new HashMap<>();
-            mutationParams.put("rate", 0.05); // Default mutation rate jika basic
+            mutationParams.put("rate", 0.05);
             
             MutationStrategy mutationStrategy = MutationStrategyFactory.createStrategy(
                     config.mutationType, 
-                    GlobalRandom.rdm, // Menggunakan GlobalRandom agar mutasi juga deterministik
+                    GlobalRandom.rdm, 
                     mutationParams
             );
             System.out.println("Strategi Mutasi: " + mutationStrategy.getStrategyName());
 
-            // Inisialisasi GA
-            // PENTING: Kita mengoper GlobalRandom.rdm ke dalam GA.
-            // Ini memastikan GA menggunakan generator acak yang sama dengan yang kita seed di awal.
+            // Menggunakan GlobalRandom untuk single run
             GeneticAlgorithm ga = new GeneticAlgorithm(
                     config.populationSize,
                     config.maxGenerations,
@@ -115,14 +79,14 @@ public class Mosaic {
                     config.eliteCount,
                     mutationStrategy,
                     puzzle,
-                    GlobalRandom.rdm // Inject GlobalRandom
+                    GlobalRandom.rdm 
             );
 
-            // 4. Jalankan GA
+            // Jalankan GA
             System.out.println("Memulai proses evolusi...");
             long startGA = System.currentTimeMillis();
             
-            ga.run(); // Menjalankan loop evolusi
+            ga.run(); 
             
             long endGA = System.currentTimeMillis();
             System.out.println("Evolusi selesai.");
@@ -131,7 +95,6 @@ public class Mosaic {
 
         } catch (IOException e) {
             System.err.println("Gagal membaca file: " + e.getMessage());
-            System.err.println("Pastikan file ada dan formatnya sesuai spesifikasi.");
         } catch (Exception e) {
             System.err.println("Terjadi kesalahan sistem:");
             e.printStackTrace();
@@ -139,11 +102,11 @@ public class Mosaic {
     }
 
     /**
-     * Membaca file teks dan mengubahnya menjadi konfigurasi solver.
+     * Memparsing file teks input menjadi objek konfigurasi dan puzzle.
      *
-     * @param filename path ke file input
-     * @return objek {@link SolverConfig} yang berisi puzzle dan hyperparameter
-     * @throws IOException jika terjadi kesalahan I/O
+     * @param filename lokasi file input
+     * @return konfigurasi solver berisi parameter dan objek puzzle awal
+     * @throws IOException jika terjadi kesalahan IO saat membaca file
      */
     private static SolverConfig parseInputFile(String filename) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(filename));
@@ -172,7 +135,6 @@ public class Mosaic {
             String[] line = parseLine(br);
             for (int c = 0; c < cols; c++) {
                 String valStr = line[c];
-                // Support input angka, -1, atau '.'
                 if (!valStr.equals(".") && !valStr.equals("-1")) {
                     int val = Integer.parseInt(valStr);
                     puzzle.addClue(new Clue(r, c, val));
@@ -185,21 +147,20 @@ public class Mosaic {
     }
 
     /**
-     * Helper untuk membaca baris non-kosong dan memecahnya berdasarkan spasi/tab.
+     * Membaca baris berikutnya yang valid (mengabaikan baris kosong atau komentar).
      */
     private static String[] parseLine(BufferedReader br) throws IOException {
         String line;
         while ((line = br.readLine()) != null) {
             line = line.trim();
-            if (line.isEmpty() || line.startsWith("#")) continue; // Skip kosong atau komentar
+            if (line.isEmpty() || line.startsWith("#")) continue;
             return line.split("\\s+");
         }
         throw new IOException("Unexpected end of file");
     }
 
     /**
-     * Inner class sederhana untuk menampung hasil parsing.
-     * Hanya digunakan sebagai Data Transfer Object (DTO).
+     * Struktur data sederhana untuk menampung hasil parsing konfigurasi.
      */
     private static class SolverConfig {
         Puzzle puzzle;
