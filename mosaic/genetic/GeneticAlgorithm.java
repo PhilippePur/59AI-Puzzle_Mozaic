@@ -1,11 +1,11 @@
 package mosaic.genetic;
 
-import mosaic.Elitism;
+import mosaic.genetic.elitism.*;
 import mosaic.genetic.crossover.CrossoverStrategy;
 import mosaic.genetic.crossover.UniformCrossover;
 import mosaic.genetic.mutation.*;
 import mosaic.puzzle.*;
-import mosaic.selection.TournamentSelection;
+import mosaic.genetic.selection.*;
 import java.util.*;
 
 /**
