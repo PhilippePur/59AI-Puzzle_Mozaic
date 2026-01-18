@@ -78,12 +78,12 @@ public class Mosaic {
             
             // Konfigurasi tipe strategi (String)
             String mutationType = "basic";
-            String crossoverType = "singleblock"; // Default value sesuai kode teman
-            String selectionType = "tournament"; // Default value
+            String crossoverType = "singleblock"; 
+            String selectionType = "tournament"; 
 
             // Setup Strategi Mutasi menggunakan Factory
             Map<String, Object> mutationParams = new HashMap<>();
-            mutationParams.put("rate", 0.05); // Default mutation rate jika basic
+            mutationParams.put("rate", 0.05); 
 
             MutationStrategy mutationStrategy = MutationStrategyFactory.createStrategy(
                     mutationType,
@@ -119,7 +119,7 @@ public class Mosaic {
                     eliteCount,
                     crossoverStrategy,
                     mutationStrategy,
-                    selectionStrategy); // Added selectionStrategy
+                    selectionStrategy); 
 
             // Run GA 
             Individual best = ga.run(); 
