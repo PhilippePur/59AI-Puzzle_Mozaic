@@ -5,12 +5,15 @@ import mosaic.puzzle.Puzzle;
 import java.util.Random;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import mosaic.util.GlobalRandom;
 
 
 public class AdaptiveMutation implements MutationStrategy {
 
     private final List<MutationStrategy> availableStrategies;
+    private final Map<String, MutationStrategy> strategyMap;
     private final Random random;
     private int currentGeneration;
     private double averageFitness;
@@ -20,6 +23,11 @@ public class AdaptiveMutation implements MutationStrategy {
     public AdaptiveMutation(List<MutationStrategy> strategies) {
 
         this.availableStrategies = new ArrayList<>(strategies);
+        this.strategyMap = new HashMap<>();
+        // Build strategy map for O(1) lookup
+        for (MutationStrategy strategy : strategies) {
+            strategyMap.put(strategy.getStrategyName(), strategy);
+        }
         this.currentGeneration = 0;
         this.averageFitness = 0.0;
         this.diversity = 1.0;
@@ -85,13 +93,9 @@ public class AdaptiveMutation implements MutationStrategy {
     }
 
     private MutationStrategy findStrategyByName(String name) {
-        for (MutationStrategy strategy : availableStrategies) {
-            if (strategy.getStrategyName().contains(name)) {
-                return strategy;
-            }
-        }
-
-        return availableStrategies.get(0);
+        // O(1) lookup using HashMap instead of linear search
+        MutationStrategy strategy = strategyMap.get(name);
+        return (strategy != null) ? strategy : availableStrategies.get(0);
     }
 
     

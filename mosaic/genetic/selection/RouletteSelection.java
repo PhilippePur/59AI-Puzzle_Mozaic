@@ -1,5 +1,6 @@
 package mosaic.genetic.selection;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import mosaic.puzzle.Individual;
@@ -30,8 +31,26 @@ import mosaic.util.GlobalRandom;
  * @author Greg
  */
 
-public class RouletteSelection {
-    public static Individual select(List<Individual> population) {
+public class RouletteSelection implements SelectionStrategy {
+
+    private final int poolNumber;
+
+    public RouletteSelection(int poolNumber) {
+        this.poolNumber = poolNumber;
+    }
+
+    @Override
+    public List<Individual> select(List<Individual> population) {
+        List<Individual> matingPool = new ArrayList<>();
+
+        for (int i = 0; i < poolNumber; i++) {
+            matingPool.add(get(population));
+        }
+
+        return matingPool;
+    }
+
+    public Individual get(List<Individual> population) {
         int size = population.size();
         double totalFitness = 0;
         for (int i = 0; i < size; i++) {
