@@ -11,6 +11,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 
 /**
  * Kelas utama (Main Class) untuk eksekusi tunggal Solver Mosaic Puzzle.
@@ -28,122 +34,266 @@ import java.util.Map;
  */
 public class Mosaic {
 
-    /**
-     * Main method untuk menjalankan solver mosaic puzzle.
-     * @param args argumen baris perintah. argumen pertama diharapkan adalah path ke file input. 
-     * File yang bisa dipilih antara lain:
-     * */
-    public static void main(String[] args) {
-        String filename = (args.length > 0) ? args[0] : "experiment_input.txt";
+    public static void main(String[] args) throws Exception {
 
-        try {
-            // Membaca input dari file txt & Inisialisasi Puzzle (Object yang menyimpan informasi tentang context problem)
-            BufferedReader br = new BufferedReader(new FileReader(filename));
+        String folderPath = "mosaic/testcase/10x10";
+        String outputFolder = "mosaic/output/10x10/";
+        String summaryPath = outputFolder + "/summary.txt";
 
-            // Membaca dimensi puzzle
-            String[] dims = parseLine(br);
-            int rows = Integer.parseInt(dims[0]);
-            int cols = Integer.parseInt(dims[1]);
+        new File(outputFolder).mkdirs();
 
-            Puzzle puzzle = new Puzzle(rows, cols);
+        File folder = new File(folderPath);
+        File[] files = folder.listFiles((dir, name) -> name.endsWith(".txt"));
 
-            // Membaca isi puzzle (kotak kosong & angka petunjuknya)
-            for (int r = 0; r < rows; r++) {
-                String[] line = parseLine(br);
-                for (int c = 0; c < cols; c++) {
-                    String valStr = line[c];
-                    // Support input angka, -1, atau '.'
-                    if (!valStr.equals(".") && !valStr.equals("-1")) {
-                        int val = Integer.parseInt(valStr);
-                        puzzle.addClue(new Clue(r, c, val));
+        if (files == null || files.length == 0) {
+            System.err.println("Folder kosong atau tidak ditemukan.");
+            return;
+        }
+
+        // =======================
+        // GRID SEARCH PARAMETERS
+        // =======================
+
+        int[] populationSizes = { 50, 100, 200 };
+        int[] maxGenerationsList = { 200, 500, 1000 };
+        double[] mutationRates = { 0.001, 0.005, 0.01 };
+        double[] crossoverRates = { 0.6, 0.8, 0.9 };
+        int[] eliteCounts = { 2, 5 };
+
+        String[] mutationTypes = { "constraint" };
+        String[] crossoverTypes = { "onepoint", "twopoint", "singleblock", "multiblock" };
+        String[] selectionTypes = { "tournament", "truncation" };
+
+        // =======================
+
+        int bestSolvedCount = -1;
+        String bestSolvedConfig = "";
+        double bestSolvedAvgFitness = 0;
+
+        double bestAvgFitness = -1;
+        String bestFitnessConfig = "";
+        int bestFitnessSolvedCount = 0;
+
+        int configCount = 0;
+
+        for (int popSize : populationSizes) {
+            for (int maxGen : maxGenerationsList) {
+                for (double mutRate : mutationRates) {
+                    for (double crossRate : crossoverRates) {
+                        for (int elite : eliteCounts) {
+                            for (String mutType : mutationTypes) {
+                                for (String crossType : crossoverTypes) {
+                                    for (String selType : selectionTypes) {
+
+                                        configCount++;
+
+                                        String configName = String.format(
+                                                "POP%d_GEN%d_MUT%.3f_CROSS%.2f_ELITE%d_M%s_C%s_S%s",
+                                                popSize, maxGen, mutRate, crossRate, elite,
+                                                mutType, crossType, selType);
+
+                                        String outputPath = outputFolder + configName + ".txt";
+
+                                        System.out.println("\n======================================");
+                                        System.out.println("Running Config: " + configName);
+                                        System.out.println("======================================");
+
+                                        double[] result = runConfig(files, outputPath,
+                                                popSize, maxGen, mutRate, crossRate, elite,
+                                                mutType, crossType, selType);
+
+                                        int solvedCount = (int) result[0];
+                                        double avgFitness = result[1];
+
+                                        // Best solved
+                                        if (solvedCount > bestSolvedCount) {
+                                            bestSolvedCount = solvedCount;
+                                            bestSolvedConfig = configName;
+                                            bestSolvedAvgFitness = avgFitness;
+                                        }
+
+                                        // Best avg fitness
+                                        if (avgFitness > bestAvgFitness) {
+                                            bestAvgFitness = avgFitness;
+                                            bestFitnessConfig = configName;
+                                            bestFitnessSolvedCount = solvedCount;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
+        }
 
-            br.close(); // Membaca input selesai sampai sini
+        System.out.println("\nTOTAL CONFIG TESTED: " + configCount);
 
-            // Mulai menghitung waktu eksekusi untuk ditampilkan di hasil
-            long startTime = System.currentTimeMillis();
+        System.out.println("\n======================================");
+        System.out.println("GRID SEARCH SUMMARY");
+        System.out.println("======================================");
 
-            // Deduksi awal menggunakan heuristic untuk mempersempit solution space
-            HeuristicSolver.applyHeuristics(puzzle, -1); // Hasil langsung tercatat di variabel pada object puzzle
+        System.out.println("\nBEST BY SOLVED COUNT:");
+        System.out.println("Config : " + bestSolvedConfig);
+        System.out.println("Solved : " + bestSolvedCount);
+        System.out.println("AvgFit : " + bestSolvedAvgFitness);
 
-            // Persiapan Algoritma Genetik
-            // Parameter & Operator pilihan (sudah di eksperimen dan dipilih yang terbaik)
-            int populationSize = 100;
-            int maxGenerations = 100;
-            double mutationRate = 0.05;
-            double crossoverRate = 0.7;
-            int eliteCount = 5;
-            
-            // Konfigurasi tipe strategi (String)
-            String mutationType = "basic";
-            String crossoverType = "singleblock"; // Default value sesuai kode teman
-            String selectionType = "tournament"; // Default value
+        System.out.println("\nBEST BY AVERAGE FITNESS:");
+        System.out.println("Config : " + bestFitnessConfig);
+        System.out.println("Solved : " + bestFitnessSolvedCount);
+        System.out.println("AvgFit : " + bestAvgFitness);
 
-            // Setup Strategi Mutasi menggunakan Factory
-            Map<String, Object> mutationParams = new HashMap<>();
-            mutationParams.put("rate", 0.05); // Default mutation rate jika basic
+        try (PrintWriter summaryWriter = new PrintWriter(new FileWriter(summaryPath))) {
 
-            MutationStrategy mutationStrategy = MutationStrategyFactory.createStrategy(
-                    mutationType,
-                    GlobalRandom.rdm,
-                    mutationParams);
+            summaryWriter.println("======================================");
+            summaryWriter.println("GRID SEARCH SUMMARY");
+            summaryWriter.println("======================================");
 
-            // Setup Strategi Crossover menggunakan Factory
-            Map<String, Object> crossoverParams = new HashMap<>();
-            // Bisa tambahkan parameter khusus crossover jika ada (misal num_blocks untuk multiblock)
-            CrossoverStrategy crossoverStrategy = CrossoverStrategyFactory.createStrategy(
-                    crossoverType, 
-                    crossoverParams);
+            summaryWriter.println();
+            summaryWriter.println("BEST BY SOLVED COUNT:");
+            summaryWriter.println("Config : " + bestSolvedConfig);
+            summaryWriter.println("Solved : " + bestSolvedCount);
+            summaryWriter.println("AvgFit : " + bestSolvedAvgFitness);
 
-            // Setup Strategi Seleksi menggunakan Factory
-            Map<String, Object> selectionParams = new HashMap<>();
-            selectionParams.put("pool_size", populationSize); // Pool size biasanya sama dengan ukuran populasi
-            selectionParams.put("k", 5); // Default tournament size
-            
-            SelectionStrategy selectionStrategy = SelectionStrategyFactory.createStrategy(
-                    selectionType, 
-                    GlobalRandom.rdm, 
-                    selectionParams);
+            summaryWriter.println();
+            summaryWriter.println("BEST BY AVERAGE FITNESS:");
+            summaryWriter.println("Config : " + bestFitnessConfig);
+            summaryWriter.println("Solved : " + bestFitnessSolvedCount);
+            summaryWriter.println("AvgFit : " + bestAvgFitness);
+        }
 
-            // Inisialisasi GA
-            // Update konstruktor untuk menerima SelectionStrategy
-            GeneticAlgorithm ga = new GeneticAlgorithm(
-                    puzzle,
-                    GlobalRandom.rdm,
-                    populationSize,
-                    maxGenerations,
-                    crossoverRate,
-                    mutationRate,
-                    eliteCount,
-                    crossoverStrategy,
-                    mutationStrategy,
-                    selectionStrategy); // Added selectionStrategy
+    }
 
-            // Run GA 
-            Individual best = ga.run(); 
+    private static double[] runConfig(File[] files, String outputPath,
+            int populationSize,
+            int maxGenerations,
+            double mutationRate,
+            double crossoverRate,
+            int eliteCount,
+            String mutationType,
+            String crossoverType,
+            String selectionType) throws Exception {
 
-            // Mencatat waktu berakhirnya eksekusi
-            long endTime = System.currentTimeMillis();
+        try (PrintWriter writer = new PrintWriter(new FileWriter(outputPath))) {
 
-            // Laporan output
-            System.out.println("===== MOSAIC PUZZLE SOLVER RESULT =====");
-            System.out.printf("Execution time: %d ms\n", (endTime - startTime));
-            System.out.println("Best Fitness: " + best.getFitness());
-            System.out.println("Best Individual: \n" + best.toString());
-        } catch (IOException e) {
-            System.err.println("Gagal membaca file: " + e.getMessage());
-        } catch (Exception e) {
-            System.err.println("Terjadi kesalahan sistem:");
-            e.printStackTrace();
+            double totalFitnessAll = 0;
+            int totalTestcase = 0;
+
+            int solvedCount = 0;
+
+            for (File file : files) {
+                String filename = file.getPath();
+                System.out.println("  Running test case: " + file.getName());
+
+                long startTime = System.currentTimeMillis();
+
+                Individual best = runSolver(filename,
+                        populationSize, maxGenerations,
+                        mutationRate, crossoverRate, eliteCount,
+                        mutationType, crossoverType, selectionType);
+
+                long endTime = System.currentTimeMillis();
+
+                double fitness = best.getFitness();
+                totalFitnessAll += fitness;
+                totalTestcase++;
+
+                if (fitness == 1.0) {
+                    solvedCount++;
+                }
+
+                writer.println("===== TEST CASE: " + file.getName() + " =====");
+                writer.println("Execution time: " + (endTime - startTime) + " ms");
+                writer.println("Best Fitness: " + fitness);
+                writer.println(best.toString());
+                writer.println();
+            }
+
+            double avgFitness = totalFitnessAll / totalTestcase;
+
+            writer.println("==================================");
+            writer.println("TOTAL TEST CASE: " + totalTestcase);
+            writer.println("AVERAGE FITNESS: " + avgFitness);
+            writer.println("==================================");
+
+            System.out.println("  Average Fitness: " + avgFitness);
+
+            return new double[] { solvedCount, avgFitness };
         }
     }
 
+    public static Individual runSolver(
+            String filename,
+            int populationSize,
+            int maxGenerations,
+            double mutationRate,
+            double crossoverRate,
+            int eliteCount,
+            String mutationType,
+            String crossoverType,
+            String selectionType) throws Exception {
+
+        BufferedReader br = new BufferedReader(new FileReader(filename));
+
+        String[] dims = parseLine(br);
+        int rows = Integer.parseInt(dims[0]);
+        int cols = Integer.parseInt(dims[1]);
+
+        Puzzle puzzle = new Puzzle(rows, cols);
+
+        for (int r = 0; r < rows; r++) {
+            String[] line = parseLine(br);
+            for (int c = 0; c < cols; c++) {
+                String valStr = line[c];
+                if (!valStr.equals(".") && !valStr.equals("-1")) {
+                    int val = Integer.parseInt(valStr);
+                    puzzle.addClue(new Clue(r, c, val));
+                }
+            }
+        }
+        br.close();
+
+        // heuristic
+        HeuristicSolver.applyHeuristics(puzzle, -1);
+
+        Map<String, Object> mutationParams = new HashMap<>();
+        mutationParams.put("rate", mutationRate);
+
+        MutationStrategy mutationStrategy = MutationStrategyFactory.createStrategy(
+                mutationType, GlobalRandom.rdm, mutationParams);
+
+        Map<String, Object> crossoverParams = new HashMap<>();
+        CrossoverStrategy crossoverStrategy = CrossoverStrategyFactory.createStrategy(
+                crossoverType, crossoverParams);
+
+        Map<String, Object> selectionParams = new HashMap<>();
+        selectionParams.put("pool_size", populationSize);
+        selectionParams.put("k", 5);
+
+        SelectionStrategy selectionStrategy = SelectionStrategyFactory.createStrategy(
+                selectionType, GlobalRandom.rdm, selectionParams);
+
+        GeneticAlgorithm ga = new GeneticAlgorithm(
+                puzzle,
+                GlobalRandom.rdm,
+                populationSize,
+                maxGenerations,
+                crossoverRate,
+                mutationRate,
+                eliteCount,
+                crossoverStrategy,
+                mutationStrategy,
+                selectionStrategy);
+
+        return ga.run();
+    }
+
     /**
-     * Metode bantu untuk membaca baris dari file input txt. 
-     * Untuk string yang ada di suatu baris, dipecah menjadi array berdasarkan spasi.
+     * Metode bantu untuk membaca baris dari file input txt.
+     * Untuk string yang ada di suatu baris, dipecah menjadi array berdasarkan
+     * spasi.
      * Contohnya: baris yang berisi "10 5" akan dipecah menjadi array ["10", "5"].
+     * 
      * @param br objek BufferedReader untuk membaca file
      * @return array string yang dipecah dari baris yang dibaca
      * @throws IOException jika terjadi kesalahan saat membaca file
