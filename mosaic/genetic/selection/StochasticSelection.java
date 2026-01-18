@@ -2,6 +2,7 @@ package mosaic.genetic.selection;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import mosaic.puzzle.Individual;
 import mosaic.util.GlobalRandom;
@@ -33,42 +34,43 @@ import mosaic.util.GlobalRandom;
  * 
  * @author Greg
  */
-
 public class StochasticSelection implements SelectionStrategy {
 
     private final int poolNumber;
+    private final Random rng;
 
-    public StochasticSelection(int poolNumber) {
+    public StochasticSelection(int poolNumber, Random rng) {
         this.poolNumber = poolNumber;
+        this.rng = rng;
     }
 
+    @Override
     public List<Individual> select(List<Individual> population) {
-        // ini bagian findPointers
         List<Individual> matingPool = new ArrayList<>();
         int size = population.size();
+        
         double totalFitness = 0;
-        for (int i = 0; i < size; i++) {
-            totalFitness += population.get(i).getFitness();
+        for (Individual ind : population) {
+            totalFitness += ind.getFitness();
         }
 
         double dist = totalFitness / this.poolNumber;
-        double start = GlobalRandom.rdm.nextDouble(dist);
+        double start = rng.nextDouble() * dist; // Start point acak
 
         double[] pointers = new double[this.poolNumber];
         for (int i = 0; i < this.poolNumber; i++) {
             pointers[i] = start + i * dist;
         }
 
-        // seleksi individu berdasarkan pointer (stochasticnya)
         int index = 0;
-        double total = population.get(0).getFitness();
+        double currentSum = population.get(0).getFitness();
 
         for (double pointer : pointers) {
-            while (total < pointer) {
+            while (currentSum < pointer && index < size - 1) {
                 index++;
-                total += population.get(index).getFitness();
+                currentSum += population.get(index).getFitness();
             }
-            matingPool.add(population.get(index));
+            matingPool.add(population.get(index).copy());
         }
 
         return matingPool;

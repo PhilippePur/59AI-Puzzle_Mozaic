@@ -1,0 +1,5 @@
+ConfigName,AvgFitness,AvgTimeMs,AvgGenerations,SuccessRate
+Baseline,0.9367,12187.40,500.00,0.00
+Adaptive-MultiBlock,0.9773,92080.50,500.00,0.00
+Constraint-Rank,0.9784,7506.40,500.00,0.00
+HighPop-Roulette,0.9089,369178.03,500.00,0.00

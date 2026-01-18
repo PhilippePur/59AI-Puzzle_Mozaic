@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 
 import mosaic.puzzle.Individual;
 import mosaic.util.GlobalRandom;
@@ -33,37 +34,32 @@ import mosaic.util.GlobalRandom;
 
 public class TruncationSelection implements SelectionStrategy {
 
-  private final int portion;
-  private final int poolNumber;
+    private final int portion; 
+    private final int poolNumber;
+    private final Random rng;
 
-  public TruncationSelection(int portion, int poolNumber) {
-    this.portion = portion;
-    this.poolNumber = poolNumber;
-  }
-
-  public List<Individual> select(List<Individual> population) {
-    List<Individual> matingPool = new ArrayList<>();
-
-    for (int i = 0; i < poolNumber; i++) {
-      matingPool.add(get(population));
+    public TruncationSelection(int portion, int poolNumber, Random rng) {
+        this.portion = portion;
+        this.poolNumber = poolNumber;
+        this.rng = rng;
     }
 
-    return matingPool;
-  }
+    @Override
+    public List<Individual> select(List<Individual> population) {
+        List<Individual> matingPool = new ArrayList<>();
+        for (int i = 0; i < poolNumber; i++) {
+            matingPool.add(get(population));
+        }
+        return matingPool;
+    }
 
-  public Individual get(List<Individual> population) {
-    List<Individual> sorted = new ArrayList<>(population);
+    private Individual get(List<Individual> population) {
+        List<Individual> sorted = new ArrayList<>(population);
+        sorted.sort((a, b) -> Double.compare(b.getFitness(), a.getFitness()));
 
-    Collections.sort(sorted, new Comparator<Individual>() {
-      @Override
-      public int compare(Individual a, Individual b) {
-        return Double.compare(b.getFitness(), a.getFitness());
-      }
-    });
-
-    int truncate = Math.max(1, (int) Math.floor(population.size() * (this.portion / 100.0)));
-    Individual parent = sorted.get(GlobalRandom.rdm.nextInt(truncate));
-
-    return parent.copy();
-  }
+        int truncateCount = Math.max(1, (int) (sorted.size() * (this.portion / 100.0)));
+        
+        int randomIdx = rng.nextInt(truncateCount);
+        return sorted.get(randomIdx).copy();
+    }
 }

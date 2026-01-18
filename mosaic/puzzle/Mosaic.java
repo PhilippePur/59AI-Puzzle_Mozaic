@@ -3,6 +3,7 @@ package mosaic.puzzle;
 import mosaic.genetic.GeneticAlgorithm;
 import mosaic.genetic.crossover.*;
 import mosaic.genetic.mutation.*;
+import mosaic.genetic.selection.*; // Added Selection Strategy
 import mosaic.util.GlobalRandom;
 
 import java.io.BufferedReader;
@@ -31,8 +32,7 @@ public class Mosaic {
      * Main method untuk menjalankan solver mosaic puzzle.
      * @param args argumen baris perintah. argumen pertama diharapkan adalah path ke file input. 
      * File yang bisa dipilih antara lain:
-     * 
-     */
+     * */
     public static void main(String[] args) {
         String filename = (args.length > 0) ? args[0] : "experiment_input.txt";
 
@@ -75,8 +75,11 @@ public class Mosaic {
             double mutationRate = 0.05;
             double crossoverRate = 0.7;
             int eliteCount = 5;
+            
+            // Konfigurasi tipe strategi (String)
             String mutationType = "basic";
-            CrossoverStrategy crossoverStrategy = new SingleBlockCrossover();
+            String crossoverType = "singleblock"; // Default value sesuai kode teman
+            String selectionType = "tournament"; // Default value
 
             // Setup Strategi Mutasi menggunakan Factory
             Map<String, Object> mutationParams = new HashMap<>();
@@ -87,7 +90,25 @@ public class Mosaic {
                     GlobalRandom.rdm,
                     mutationParams);
 
+            // Setup Strategi Crossover menggunakan Factory
+            Map<String, Object> crossoverParams = new HashMap<>();
+            // Bisa tambahkan parameter khusus crossover jika ada (misal num_blocks untuk multiblock)
+            CrossoverStrategy crossoverStrategy = CrossoverStrategyFactory.createStrategy(
+                    crossoverType, 
+                    crossoverParams);
+
+            // Setup Strategi Seleksi menggunakan Factory
+            Map<String, Object> selectionParams = new HashMap<>();
+            selectionParams.put("pool_size", populationSize); // Pool size biasanya sama dengan ukuran populasi
+            selectionParams.put("k", 5); // Default tournament size
+            
+            SelectionStrategy selectionStrategy = SelectionStrategyFactory.createStrategy(
+                    selectionType, 
+                    GlobalRandom.rdm, 
+                    selectionParams);
+
             // Inisialisasi GA
+            // Update konstruktor untuk menerima SelectionStrategy
             GeneticAlgorithm ga = new GeneticAlgorithm(
                     puzzle,
                     GlobalRandom.rdm,
@@ -97,7 +118,8 @@ public class Mosaic {
                     mutationRate,
                     eliteCount,
                     crossoverStrategy,
-                    mutationStrategy);
+                    mutationStrategy,
+                    selectionStrategy); // Added selectionStrategy
 
             // Run GA 
             Individual best = ga.run(); 

@@ -2,9 +2,11 @@ package mosaic.puzzle;
 
 import mosaic.genetic.GeneticAlgorithm;
 import mosaic.genetic.crossover.CrossoverStrategy;
-import mosaic.genetic.crossover.UniformCrossover;
+import mosaic.genetic.crossover.CrossoverStrategyFactory; // Added
 import mosaic.genetic.mutation.MutationStrategy;
 import mosaic.genetic.mutation.MutationStrategyFactory;
+import mosaic.genetic.selection.SelectionStrategy; // Added
+import mosaic.genetic.selection.SelectionStrategyFactory; // Added
 import mosaic.util.GlobalRandom;
 
 import java.io.BufferedReader;
@@ -59,8 +61,7 @@ public class Experiment {
         System.out.printf("Puzzle loaded: %dx%d with %d clues.\n",
                 puzzle.getRows(), puzzle.getCols(), puzzle.getClues().size());
 
-        /** 
-        // 2. Run Heuristic Analysis Experiment
+        /** // 2. Run Heuristic Analysis Experiment
         try {
             runHeuristicExperiment(puzzle);
         } catch (IOException e) {
@@ -241,17 +242,26 @@ public class Experiment {
         mutParams.put("rate", cfg.getMutRate());
         MutationStrategy mutStrategy = MutationStrategyFactory.createStrategy(cfg.getMutStrategyName(), rng, mutParams);
 
-        // Setup Crossover Strategy (Fixed to Uniform for now)
-        CrossoverStrategy crossStrategy = new UniformCrossover();
+        // Setup Crossover Strategy (Using Factory with default params if not specified in config)
+        Map<String, Object> crossParams = new HashMap<>();
+        // Default to "uniform" if not specified, or hardcode as requested
+        String crossType = "uniform"; // Default in original code was hardcoded UniformCrossover
+        CrossoverStrategy crossStrategy = CrossoverStrategyFactory.createStrategy(crossType, crossParams);
+
+        // Setup Selection Strategy (Default to Tournament as in original code)
+        Map<String, Object> selParams = new HashMap<>();
+        selParams.put("pool_size", cfg.getPopSize());
+        selParams.put("k", 5);
+        SelectionStrategy selStrategy = SelectionStrategyFactory.createStrategy("tournament", rng, selParams);
 
         // Init GA
         GeneticAlgorithm ga = new GeneticAlgorithm(
                 puzzle, rng,
                 cfg.getPopSize(), cfg.getMaxGen(), cfg.getCrossRate(), cfg.getMutRate(), cfg.getEliteCount(),
-                crossStrategy, mutStrategy);
+                crossStrategy, mutStrategy, selStrategy); // Added selStrategy
 
         long start = System.currentTimeMillis();
-        Individual best = ga.run();
+        mosaic.puzzle.Individual best = ga.run();
         long end = System.currentTimeMillis();
 
         return new RunResult(best.getFitness(), end - start, 0);

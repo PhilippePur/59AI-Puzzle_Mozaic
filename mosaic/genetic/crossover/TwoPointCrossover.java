@@ -3,7 +3,6 @@ package mosaic.genetic.crossover;
 import java.util.Random;
 
 import mosaic.puzzle.Individual;
-import mosaic.util.GlobalRandom;
 
 /**
  * Implementasi konkrit dari CrossoverStrategy menggunakan Two Point Crossover
@@ -13,8 +12,7 @@ import mosaic.util.GlobalRandom;
  * titik potong secara acak (cutStart dan cutEnd) secara random. Block diantara
  * 2 titik potong itu akan diwarisi ke child hasil crossover
  * </p>
- * 
- * @author Greg
+ * * @author Greg
  */
 public class TwoPointCrossover implements CrossoverStrategy {
     @Override
@@ -24,12 +22,13 @@ public class TwoPointCrossover implements CrossoverStrategy {
 
         Individual child = parent1.copy(); // ambil base untuk child
 
-        boolean slice = GlobalRandom.rdm.nextBoolean();
+        // Menggunakan rng lokal, bukan GlobalRandom agar thread-safe
+        boolean slice = rng.nextBoolean();
 
         // kalo true, maka potong row, kalo false, potong cols
         if (slice) {
-            int cutStart = GlobalRandom.rdm.nextInt(rows / 2);
-            int cutEnd = GlobalRandom.rdm.nextInt(cutStart + 1, rows - 1);
+            int cutStart = rng.nextInt(rows / 2);
+            int cutEnd = rng.nextInt(rows - 1 - (cutStart + 1)) + (cutStart + 1);
 
             for (int start = cutStart; start <= cutEnd; start++) {
                 for (int c = 0; c < cols; c++) {
@@ -39,8 +38,8 @@ public class TwoPointCrossover implements CrossoverStrategy {
                 }
             }
         } else {
-            int cutStart = GlobalRandom.rdm.nextInt(cols / 2);
-            int cutEnd = GlobalRandom.rdm.nextInt(cutStart + 1, cols - 1);
+            int cutStart = rng.nextInt(cols / 2);
+            int cutEnd = rng.nextInt(cols - 1 - (cutStart + 1)) + (cutStart + 1);
 
             for (int c = cutStart; c <= cutEnd; c++) {
                 for (int r = 0; r < rows; r++) {

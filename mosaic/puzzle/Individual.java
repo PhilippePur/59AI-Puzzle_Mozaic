@@ -268,7 +268,8 @@ public class Individual {
 
             // Tambahkan selisih absolut ke total error
             totalError += Math.abs(blackCount - clueValue);
-
+            
+            // Hitung Maximum possible error 
             maxPossibleError += Math.max(Math.abs(9 - clueValue), Math.abs(clueValue - 0));
         }
 
@@ -343,7 +344,11 @@ public class Individual {
         StringBuilder sb = new StringBuilder();
         for (int r = 0; r < puzzle.getRows(); r++) {
             for (int c = 0; c < puzzle.getCols(); c++) {
-                sb.append(grid[r][c] ? "#" : ".");
+                if(isFixed(r, c)){
+                    sb.append(grid[r][c] ? "$" : ",");
+                }else{
+                    sb.append(grid[r][c] ? "#" : ".");
+                }
                 sb.append(" ");
             }
             sb.append("\n");

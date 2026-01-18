@@ -2,182 +2,217 @@ package mosaic.puzzle;
 
 import mosaic.genetic.GeneticAlgorithm;
 import mosaic.genetic.crossover.CrossoverStrategy;
-import mosaic.genetic.crossover.UniformCrossover;
+import mosaic.genetic.crossover.CrossoverStrategyFactory;
 import mosaic.genetic.mutation.MutationStrategy;
 import mosaic.genetic.mutation.MutationStrategyFactory;
+import mosaic.genetic.selection.SelectionStrategy;
+import mosaic.genetic.selection.SelectionStrategyFactory;
+
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * Runner untuk menjalankan eksperimen batch/tuning secara paralel.
+ * Kelas utama untuk menjalankan eksperimen otomatis pada algoritma genetik Mosaic Puzzle.
  * <p>
- * Kelas ini memfasilitasi pengujian berbagai konfigurasi hyperparameter secara
- * bersamaan
- * (multithreading) sambil menjamin keadilan eksperimen (fairness) dengan
- * menggunakan
- * seed generator acak yang identik untuk setiap skenario.
+ * Kelas ini memfasilitasi pengujian berbagai konfigurasi hyperparameter (Grid Search)
+ * secara paralel (multithreading) dengan jaminan hasil yang deterministik (fairness).
+ * </p>
  */
 public class MosaicExperiment {
 
-    private static final String PUZZLE_FILE = "puzzle_input.txt";
+    private static final int TRIALS_PER_CONFIG = 30; // Jumlah pengulangan per skenario
     private static final int NUM_THREADS = Runtime.getRuntime().availableProcessors();
+    
+    // Seed tetap untuk setiap trial agar adil antar konfigurasi
+    private static final List<Long> TRIAL_SEEDS = new ArrayList<>();
 
-    /**
-     * Entry point eksperimen.
-     * Memuat data, mendefinisikan skenario, dan mendistribusikan tugas ke thread
-     * pool.
-     */
-    public static void main(String[] args) {
-        System.out.println("=== MOSAIC EXPERIMENT RUNNER (DETERMINISTIC) ===");
-        System.out.println("CPU Cores: " + NUM_THREADS);
-        System.out.println("Target File: " + PUZZLE_FILE);
-
-        try {
-            // Load Puzzle & Base Seed (Satu kali baca)
-            ExperimentData data = loadExperimentData(PUZZLE_FILE);
-            Puzzle basePuzzle = data.puzzle;
-            long baseSeed = data.seed;
-
-            System.out.println("Base Seed loaded: " + baseSeed);
-
-            // Terapkan heuristik sekali di awal pada objek puzzle bersama
-            System.out.println("Applying Heuristics Pre-processing...");
-            int fixed = HeuristicSolver.applyHeuristics(basePuzzle, -1);
-            System.out.printf("Heuristics Fixed: %d cells.\n\n", fixed);
-
-            // Definisi Skenario Eksperimen (Grid Search)
-            List<ExperimentConfig> scenarios = new ArrayList<>();
-            // scenarios.add(new ExperimentConfig("Scenario A (Basic)", 200, 15000, 0.9, 4, "basic", 0.05));
-            scenarios.add(new ExperimentConfig("Scenario A (Generation 500)", 200, 500, 0.9, 4, "constraint", 0.05));
-            scenarios.add(new ExperimentConfig("Scenario B (Generation) 1000)", 200, 1000, 0.9, 4, "constraint", 0.05));
-            scenarios.add(new ExperimentConfig("Scenario C (Generation) 5000)", 200, 5000, 0.9, 4, "constraint", 0.05));
-            scenarios.add(new ExperimentConfig("Scenario D (Generation) 10000)", 200, 10000, 0.9, 4, "constraint", 0.05));
-            scenarios.add(new ExperimentConfig("Scenario E (Generation) 20000)", 200, 20000, 0.9, 4, "constraint", 0.05));
-            // scenarios.add(new ExperimentConfig("Scenario C (Adaptive)", 200, 15000, 0.9, 4, "adaptive", 0.0));
-            // scenarios.add(new ExperimentConfig("Scenario D (High Pop)", 500, 15000, 0.9, 10, "basic", 0.05));
-            // scenarios.add(new ExperimentConfig("Scenario E (Low Cross)", 200, 15000, 0.6, 4, "basic", 0.05));
-
-            // Eksekusi Paralel
-            ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
-            List<Future<ExperimentResult>> futures = new ArrayList<>();
-            long startTime = System.currentTimeMillis();
-
-            System.out.println("Running " + scenarios.size() + " scenarios...");
-            System.out.println("NOTE: Semua skenario menggunakan Seed yang SAMA (" + baseSeed + ") untuk fairness.");
-            System.out.println(
-                    "-----------------------------------------------------------------------------------------");
-            System.out.printf("%-25s | %-10s | %-10s | %-10s | %-15s\n",
-                    "Scenario Name", "Time (ms)", "Gens", "Fitness", "Status");
-            System.out.println(
-                    "-----------------------------------------------------------------------------------------");
-
-            for (ExperimentConfig config : scenarios) {
-                // Mengirim seed yang sama ke setiap worker thread
-                Callable<ExperimentResult> task = () -> runSingleExperiment(basePuzzle, config, baseSeed);
-                futures.add(executor.submit(task));
-            }
-
-            //  Agregasi Hasil
-            for (Future<ExperimentResult> future : futures) {
-                try {
-                    ExperimentResult res = future.get();
-                    printResultRow(res);
-                } catch (InterruptedException | ExecutionException e) {
-                    System.err.println("Experiment Failed: " + e.getMessage());
-                    e.printStackTrace();
-                }
-            }
-
-            long totalTime = System.currentTimeMillis() - startTime;
-            System.out.println(
-                    "-----------------------------------------------------------------------------------------");
-            System.out.println("Total Wall-Clock Time: " + totalTime + " ms");
-
-            executor.shutdown();
-
-        } catch (Exception e) {
-            e.printStackTrace();
+    static {
+        Random r = new Random(5555L); // Meta-seed
+        for (int i = 0; i < TRIALS_PER_CONFIG; i++) {
+            TRIAL_SEEDS.add(r.nextLong());
         }
     }
 
     /**
-     * Menjalankan satu eksperimen secara terisolasi.
-     * Menggunakan instance Random baru dengan seed yang dipaksa sama untuk
-     * deterministik.
-     *
-     * @param sharedPuzzle referensi objek puzzle (thread-safe untuk baca)
-     * @param config       konfigurasi hyperparameter untuk run ini
-     * @param seed         nilai seed acak yang harus digunakan
-     * @return hasil eksekusi eksperimen
+     * Entry point eksperimen.
+     * @param args argumen baris perintah (opsional path file input)
      */
-    private static ExperimentResult runSingleExperiment(Puzzle sharedPuzzle, ExperimentConfig config, long seed) {
-        long start = System.currentTimeMillis();
+    public static void main(String[] args) {
+        System.out.println("=== STARTING AUTOMATED EXPERIMENTS ===");
+        System.out.println("CPU Cores: " + NUM_THREADS);
 
-        // Membuat Random lokal dengan seed yang ditentukan (Deterministik antar thread)
-        Random threadRng = new Random(seed);
+        Puzzle puzzle = null;
+        File file = new File("experiment_input.txt");
+        
+        if (file.exists()) {
+            System.out.println("Loading puzzle from experiment_input.txt...");
+            try {
+                puzzle = parsePuzzleFromFile("experiment_input.txt");
+            } catch (IOException e) {
+                System.err.println("Failed to load puzzle file: " + e.getMessage());
+                return;
+            }
+        } else {
+            System.err.println("File experiment_input.txt not found!");
+            return;
+        }
 
-        Map<String, Object> mParams = new HashMap<>();
-        mParams.put("rate", config.mutationRate);
+        System.out.printf("Puzzle loaded: %dx%d with %d clues.\n",
+                puzzle.getRows(), puzzle.getCols(), puzzle.getClues().size());
 
-        MutationStrategy strategy = MutationStrategyFactory.createStrategy(
-                config.mutationType, threadRng, mParams);
+        // 1. Apply Heuristics (Pre-processing)
+        System.out.println("\nApplying Heuristics to Puzzle for GA Experiments...");
+        // Menggunakan limit -1 (tanpa batas iterasi)
+        int fixedCount = HeuristicSolver.applyHeuristics(puzzle, -1);
+        System.out.println("Heuristics applied. Fixed cells: " + fixedCount);
 
-        CrossoverStrategy crossStrategy = new UniformCrossover();
+        // 2. Run GA Experiments
+        try {
+            // Contoh pemanggilan eksperimen (Anda bisa uncomment sesuai kebutuhan)
+            runComparisonExperiment(puzzle);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        GeneticAlgorithm ga = new GeneticAlgorithm(
-                config.popSize,
-                config.maxGen,
-                config.crossRate,
-                config.eliteCount,
-                strategy,
-                crossStrategy,
-                sharedPuzzle,
-                threadRng);
-
-        mosaic.puzzle.Individual solution = ga.run();
-
-        long end = System.currentTimeMillis();
-        boolean isSolved = (solution != null && Math.abs(solution.getFitness() - 1.0) < 0.000001);
-
-        return new ExperimentResult(
-                config.name,
-                (end - start),
-                ga.getCurrentGeneration(),
-                ga.getBestFitness(),
-                isSolved);
-    }
-
-    private static void printResultRow(ExperimentResult res) {
-        System.out.printf("%-25s | %-10d | %-10d | %-10.5f | %-15s\n",
-                res.name, res.durationMs, res.generations, res.fitness,
-                (res.solved ? "SOLVED" : "Not Solved"));
+        System.out.println("\nAll Experiments Finished.");
     }
 
     /**
-     * Membaca struktur Grid Puzzle dan Seed dari file input.
-     * Mengabaikan parameter lain karena parameter eksperimen ditentukan di kode.
+     * Menjalankan skenario perbandingan beberapa konfigurasi.
      */
-    private static ExperimentData loadExperimentData(String filename) throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(filename));
+    private static void runComparisonExperiment(Puzzle puzzle) throws IOException {
+        System.out.println("\nRunning Experiment: Strategy Comparison...");
+        String filename = "exp_strategy_comparison.csv";
 
+        List<ExperimentConfig> configs = new ArrayList<>();
+        
+        // Definisikan Skenario
+        // Config: Name, Pop, MaxGen, CrossRate, MutRate, Elite, MutStrat, CrossStrat, SelectStrat
+        
+        configs.add(new ExperimentConfig("Baseline", 100, 500, 0.8, 0.05, 2, "basic", "uniform", "tournament"));
+        configs.add(new ExperimentConfig("Adaptive-MultiBlock", 100, 500, 0.8, 0.0, 2, "adaptive", "multiblock", "tournament"));
+        configs.add(new ExperimentConfig("Constraint-Rank", 100, 500, 0.8, 0.0, 2, "constraint", "uniform", "rank"));
+        configs.add(new ExperimentConfig("HighPop-Roulette", 300, 500, 0.8, 0.05, 5, "basic", "uniform", "roulette"));
+
+        runScenario(filename, puzzle, configs);
+    }
+
+    /**
+     * Menjalankan satu set skenario eksperimen dan menyimpan hasilnya ke CSV.
+     */
+    private static void runScenario(String filename, Puzzle puzzle, List<ExperimentConfig> configs) throws IOException {
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
+        
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            // Header CSV
+            writer.println("ConfigName,AvgFitness,AvgTimeMs,AvgGenerations,SuccessRate");
+
+            for (ExperimentConfig cfg : configs) {
+                System.out.print("  Testing " + cfg.name + " ");
+                
+                List<Future<RunResult>> futures = new ArrayList<>();
+
+                // Submit jobs
+                for (int i = 0; i < TRIALS_PER_CONFIG; i++) {
+                    long seed = TRIAL_SEEDS.get(i);
+                    Callable<RunResult> task = () -> runSingleTrial(puzzle, cfg, seed);
+                    futures.add(executor.submit(task));
+                }
+
+                // Collect results
+                double totalFitness = 0;
+                long totalTime = 0;
+                int totalGens = 0;
+                int successCount = 0;
+                int done = 0;
+
+                for (Future<RunResult> f : futures) {
+                    try {
+                        RunResult res = f.get();
+                        totalFitness += res.bestFitness;
+                        totalTime += res.timeMs;
+                        totalGens += res.generations;
+                        if (res.bestFitness >= 1.0) successCount++;
+                        
+                        done++;
+                        if (done % 5 == 0) System.out.print(".");
+                        
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                System.out.println(" Done.");
+
+                // Averages
+                double avgFit = totalFitness / TRIALS_PER_CONFIG;
+                double avgTime = (double) totalTime / TRIALS_PER_CONFIG;
+                double avgGen = (double) totalGens / TRIALS_PER_CONFIG;
+                double successRate = (double) successCount / TRIALS_PER_CONFIG;
+
+                writer.printf("%s,%.4f,%.2f,%.2f,%.2f%n", 
+                    cfg.name, avgFit, avgTime, avgGen, successRate);
+                writer.flush();
+            }
+        } finally {
+            executor.shutdown();
+        }
+        System.out.println("  Results saved to " + filename);
+    }
+
+    /**
+     * Menjalankan satu kali percobaan (Single Trial) dengan konfigurasi tertentu.
+     */
+    private static RunResult runSingleTrial(Puzzle puzzle, ExperimentConfig cfg, long seed) {
+        Random rng = new Random(seed);
+
+        // 1. Setup Parameter Maps
+        Map<String, Object> mutParams = new HashMap<>();
+        mutParams.put("rate", cfg.mutRate);
+        
+        Map<String, Object> crossParams = new HashMap<>();
+        crossParams.put("num_blocks", 3); // Default params for multiblock if used
+        
+        Map<String, Object> selParams = new HashMap<>();
+        selParams.put("pool_size", cfg.popSize); // Pool size biasanya = pop size
+        selParams.put("k", 5); // Tournament k
+
+        // 2. Create Strategies via Factories
+        MutationStrategy mutStrat = MutationStrategyFactory.createStrategy(cfg.mutStrat, rng, mutParams);
+        CrossoverStrategy crossStrat = CrossoverStrategyFactory.createStrategy(cfg.crossStrat, crossParams);
+        SelectionStrategy selStrat = SelectionStrategyFactory.createStrategy(cfg.selStrat, rng, selParams);
+
+        // 3. Init GA
+        GeneticAlgorithm ga = new GeneticAlgorithm(
+            puzzle, rng, 
+            cfg.popSize, cfg.maxGen, cfg.crossRate, cfg.mutRate, cfg.eliteCount,
+            crossStrat, mutStrat, selStrat // Inject semua strategi
+        );
+
+        long start = System.currentTimeMillis();
+        mosaic.puzzle.Individual best = ga.run();
+        long end = System.currentTimeMillis();
+
+        return new RunResult(best.getFitness(), end - start, ga.getCurrentGeneration());
+    }
+
+    // --- Helper Classes ---
+
+    private static Puzzle parsePuzzleFromFile(String filename) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(filename));
         String[] dims = br.readLine().trim().split("\\s+");
         int rows = Integer.parseInt(dims[0]);
         int cols = Integer.parseInt(dims[1]);
         Puzzle puzzle = new Puzzle(rows, cols);
 
-        String[] seedLine = br.readLine().trim().split("\\s+");
-        long seed = Long.parseLong(seedLine[0]);
-
-        br.readLine(); // Skip parameter baris ke-3
-
-        String line;
         for (int r = 0; r < rows; r++) {
-            line = br.readLine();
-            if (line == null)
-                break;
+            String line = br.readLine();
+            if (line == null) break;
             String[] tokens = line.trim().split("\\s+");
             for (int c = 0; c < cols; c++) {
                 String valStr = tokens[c];
@@ -187,55 +222,38 @@ public class MosaicExperiment {
             }
         }
         br.close();
-        return new ExperimentData(puzzle, seed);
-    }
-
-    /**
-     * Kelas Data Transfer Object untuk mempermudah pemanggilan method-method input output 
-     * 
-     */
-
-    static class ExperimentData {
-        Puzzle puzzle;
-        long seed;
-
-        public ExperimentData(Puzzle p, long s) {
-            this.puzzle = p;
-            this.seed = s;
-        }
+        return puzzle;
     }
 
     static class ExperimentConfig {
         String name;
         int popSize, maxGen, eliteCount;
-        double crossRate, mutationRate;
-        String mutationType;
+        double crossRate, mutRate;
+        String mutStrat, crossStrat, selStrat;
 
-        public ExperimentConfig(String name, int popSize, int maxGen, double crossRate,
-                int eliteCount, String mutationType, double mutationRate) {
+        public ExperimentConfig(String name, int pop, int gen, double cross, double mut, int elite, 
+                                String mutS, String crossS, String selS) {
             this.name = name;
-            this.popSize = popSize;
-            this.maxGen = maxGen;
-            this.crossRate = crossRate;
-            this.eliteCount = eliteCount;
-            this.mutationType = mutationType;
-            this.mutationRate = mutationRate;
+            this.popSize = pop;
+            this.maxGen = gen;
+            this.crossRate = cross;
+            this.mutRate = mut;
+            this.eliteCount = elite;
+            this.mutStrat = mutS;
+            this.crossStrat = crossS;
+            this.selStrat = selS;
         }
     }
 
-    static class ExperimentResult {
-        String name;
-        long durationMs;
+    static class RunResult {
+        double bestFitness;
+        long timeMs;
         int generations;
-        double fitness;
-        boolean solved;
 
-        public ExperimentResult(String name, long durationMs, int generations, double fitness, boolean solved) {
-            this.name = name;
-            this.durationMs = durationMs;
-            this.generations = generations;
-            this.fitness = fitness;
-            this.solved = solved;
+        public RunResult(double f, long t, int g) {
+            this.bestFitness = f;
+            this.timeMs = t;
+            this.generations = g;
         }
     }
 }

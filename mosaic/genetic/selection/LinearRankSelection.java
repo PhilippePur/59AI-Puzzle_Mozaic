@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 
 import mosaic.puzzle.Individual;
 
@@ -47,38 +48,50 @@ import mosaic.puzzle.Individual;
  */
 public class LinearRankSelection implements SelectionStrategy {
 
-    private final int selectivePressure;
+    private final double selectivePressure;
     private final int poolNumber;
+    private final Random rng;
 
-    public LinearRankSelection(int selectivePressure, int poolNumber) {
+    public LinearRankSelection(double selectivePressure, int poolNumber, Random rng) {
         this.selectivePressure = selectivePressure;
         this.poolNumber = poolNumber;
+        this.rng = rng;
     }
 
+    @Override
     public List<Individual> select(List<Individual> population) {
-
-        // Linear Rank dari populasi, lalu dipilih hasil population baru menggunakan SUS
         List<Individual> sorted = new ArrayList<>(population);
+        sorted.sort((a, b) -> Double.compare(a.getFitness(), b.getFitness()));
 
-        Collections.sort(sorted, new Comparator<Individual>() {
-            @Override
-            public int compare(Individual a, Individual b) {
-                return Double.compare(a.getFitness(), b.getFitness());
-            }
-        });
+        List<Individual> matingPool = new ArrayList<>();
+        int size = sorted.size();
 
-        int size = population.size();
+        double[] rankFitnesses = new double[size];
+        double totalRankFitness = 0;
 
-        double fitnessRank = 0;
         for (int i = 0; i < size; i++) {
-            int pos = i;
-
-            fitnessRank = 2 - this.selectivePressure + 2 * (this.selectivePressure - 1) * (pos - 1) / (size - 1);
-            sorted.get(i).setFitness(fitnessRank); // overwrite fitness
+            double pos = i + 1;
+            double rankVal = (2 - selectivePressure) / size +
+                    (2 * (selectivePressure - 1) * (pos - 1)) / (size * (size - 1));
+            rankFitnesses[i] = rankVal;
+            totalRankFitness += rankVal;
         }
 
-        StochasticSelection selector = new StochasticSelection(this.poolNumber);
+        double dist = totalRankFitness / this.poolNumber;
+        double start = rng.nextDouble() * dist;
 
-        return selector.select(sorted);
+        int index = 0;
+        double currentSum = rankFitnesses[0];
+
+        for (int i = 0; i < poolNumber; i++) {
+            double pointer = start + i * dist;
+            while (currentSum < pointer && index < size - 1) {
+                index++;
+                currentSum += rankFitnesses[index];
+            }
+            matingPool.add(sorted.get(index).copy());
+        }
+
+        return matingPool;
     }
 }
