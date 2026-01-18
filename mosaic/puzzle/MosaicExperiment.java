@@ -86,7 +86,7 @@ public class MosaicExperiment {
 
         System.out.println("\nRunning Experiment: Strategy Comparison...");
 
-        String csvFilename = outputFolder + "10x10_linearrank_sp1.0_pool200_exp.csv";
+        String csvFilename = outputFolder + "10x10_roulette_pool200_exp.csv";
 
         List<ExperimentConfig> configs = new ArrayList<>();
 
@@ -109,7 +109,7 @@ public class MosaicExperiment {
 
         String[] mutations = { "constraint" };
         String[] crossovers = { "twopoint" };
-        String[] selections = { "rank" };
+        String[] selections = { "roulette" };
 
         // Grid Search
         for (int pop : populationSizes) {
@@ -269,8 +269,9 @@ public class MosaicExperiment {
 
         Map<String, Object> selParams = new HashMap<>();
         selParams.put("pool_size", cfg.popSize); // Pool size biasanya = pop size
-        selParams.put("k", 5); // Tournament k
+        selParams.put("k", 2); // Tournament k
         selParams.put("pressure", 1.0); // selective pressure
+        selParams.put("portion", 20); // portion %
 
         // 2. Create Strategies via Factories
         MutationStrategy mutStrat = MutationStrategyFactory.createStrategy(cfg.mutStrat, rng, mutParams);
