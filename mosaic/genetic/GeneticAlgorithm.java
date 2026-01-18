@@ -1,14 +1,11 @@
 
-
-
-
-
 package mosaic.genetic;
 
 import mosaic.genetic.crossover.CrossoverStrategy;
 import mosaic.genetic.crossover.UniformCrossover;
 import mosaic.genetic.elitism.Elitism;
 import mosaic.genetic.mutation.*;
+import mosaic.genetic.selection.SelectionStrategy;
 import mosaic.genetic.selection.TournamentSelection;
 import mosaic.puzzle.*;
 import mosaic.util.GlobalRandom;
@@ -36,11 +33,13 @@ public class GeneticAlgorithm {
      */
     private final MutationStrategy mutationStrategy;
     private final CrossoverStrategy crossoverStrategy;
+    private final SelectionStrategy selectionStrategy;
 
     /**
      * variable yang digunakan untuk menyimpan state evolusi
      * seperti population yg menyimpan individu dalam populasi saat ini,
-     * currentGeneration yg mencatat saat ini sedang berada di proses generasi keberapa, dll
+     * currentGeneration yg mencatat saat ini sedang berada di proses generasi
+     * keberapa, dll
      */
     private final Random rng;
     private List<Individual> population;
@@ -51,21 +50,25 @@ public class GeneticAlgorithm {
     private double avgFitness;
 
     /**
-     * Konstruktor untuk inisialisasi Genetic Algorithm. 
-     * Dapat dipanggil melalui kelas main / kelas experimen dengan memasukkan parameter konfigurasi yang beragam
-     * @param puzzle menyimpan informasi context masalah Mosaic
-     * @param rng generator angka acak global
-     * @param popSize ukuran populasi
-     * @param maxGen jumlah maksimal generasi
+     * Konstruktor untuk inisialisasi Genetic Algorithm.
+     * Dapat dipanggil melalui kelas main / kelas experimen dengan memasukkan
+     * parameter konfigurasi yang beragam
+     * 
+     * @param puzzle        menyimpan informasi context masalah Mosaic
+     * @param rng           generator angka acak global (untuk deterministik)
+     * @param popSize       ukuran populasi
+     * @param maxGen        jumlah maksimal generasi
      * @param crossoverRate probabilitas crossover
-     * @param mutationRate probabilitas mutasi
-     * @param eliteCount jumlah individu elit yg akan dipilih untuk dipertahankan
-     * @param crossover metode crossover konkrit yang digunakan
-     * @param mutation metode mutasi konkrit yang digunakan
+     * @param mutationRate  probabilitas mutasi
+     * @param eliteCount    jumlah individu elit yg akan dipilih untuk dipertahankan
+     * @param crossover     metode crossover konkrit yang digunakan
+     * @param mutation      metode mutasi konkrit yang digunakan
+     * @param selection     metode seleksi konkrit yang digunakan
      */
-    public GeneticAlgorithm(Puzzle puzzle, Random rng, int popSize, int maxGen, 
-        double crossoverRate, double mutationRate, int eliteCount, CrossoverStrategy crossover,
-        MutationStrategy mutation) {
+    public GeneticAlgorithm(Puzzle puzzle, Random rng, int popSize, int maxGen,
+            double crossoverRate, double mutationRate, int eliteCount,
+            CrossoverStrategy crossover, MutationStrategy mutation, SelectionStrategy selection) {
+
         this.puzzle = puzzle;
         this.rng = rng;
         this.populationSize = popSize;
@@ -75,8 +78,8 @@ public class GeneticAlgorithm {
         this.eliteCount = eliteCount;
         this.crossoverStrategy = crossover;
         this.mutationStrategy = mutation;
-       
-        // Inisialisasi array list kosong untuk menyimpan populasi
+        this.selectionStrategy = selection;
+
         this.population = new ArrayList<>();
         this.currentGeneration = 0;
         this.bestFitness = 0.0;
@@ -98,18 +101,18 @@ public class GeneticAlgorithm {
         individual.calculateFitness();
     }
 
-
     /**
-     * Menghitung diversitas populasi berdasarkan perbedaan gen antara dua individu sampel.
+     * Menghitung diversitas populasi berdasarkan perbedaan gen antara dua individu
+     * sampel.
      */
     private double calculateDiversity() {
-        // Cara sederhana: hitung persentase gen yang berbeda
         if (population.size() < 2)
             return 1.0;
+
         int totalNonFixedCells = 0;
         int differences = 0;
-        
-        // Bandingkan individu pertama dengan kedua
+
+        // Bandingkan individu juara pertama dengan kedua
         Individual first = population.get(0);
         Individual second = population.get(1);
 
@@ -131,6 +134,7 @@ public class GeneticAlgorithm {
 
     /**
      * Metode utama yang menjalankan proses GA dari awal sampai akhir
+     * 
      * @return individu terbaik yang ditemukan
      */
     public Individual run() {
@@ -156,9 +160,10 @@ public class GeneticAlgorithm {
 
             // Pembuatan anak sampai newPopulation = populationSize
             while (newPopulation.size() < populationSize) {
-                // Parent Selection (pilih 2 parent)
-                Individual parent1 = TournamentSelection.select(population, 5);
-                Individual parent2 = TournamentSelection.select(population, 5);
+                List<Individual> parents = selectionStrategy.select(population);
+
+                Individual parent1 = parents.get(rng.nextInt(parents.size()));
+                Individual parent2 = parents.get(rng.nextInt(parents.size()));
 
                 // Crossover
                 Individual child;
@@ -194,22 +199,40 @@ public class GeneticAlgorithm {
         if (population.get(0).getFitness() > bestFitness) {
             bestIndividual = population.get(0).copy();
         }
-
+        calculateAvgFitness();
         return bestIndividual;
     }
 
+    
     /**
      * Membentuk populasi awal dengan individu acak yang memperhatikan fixed cells
-     */
-    private void initializePopulation() {
+    */
+   private void initializePopulation() {
         // Memastikan populasi benar benar kosong
         population.clear();
 
         // Looping untuk buat setiap individu
         for (int i = 0; i < populationSize; i++) {
-            // Inisialisasi individu baru (proses pembentukannya secara random namun tetap memperhatikan fixed cells - logicnya ada di constructor Individual)
+            // Inisialisasi individu baru (proses pembentukannya secara random namun tetap
+            // memperhatikan fixed cells - logicnya ada di constructor Individual)
             Individual individual = new Individual(puzzle, rng);
             population.add(individual);
         }
+    }
+    
+    private void calculateAvgFitness() {
+        double total = 0;
+        for (Individual ind : population) {
+            total += ind.getFitness();
+        }
+        this.avgFitness = total / population.size();
+    }
+    
+    public int getCurrentGeneration() {
+        return currentGeneration;
+    }
+    
+    public double getBestFitness() {
+        return bestFitness;
     }
 }

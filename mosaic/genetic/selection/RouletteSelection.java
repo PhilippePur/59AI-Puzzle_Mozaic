@@ -2,6 +2,7 @@ package mosaic.genetic.selection;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import mosaic.puzzle.Individual;
 import mosaic.util.GlobalRandom;
@@ -34,37 +35,38 @@ import mosaic.util.GlobalRandom;
 public class RouletteSelection implements SelectionStrategy {
 
     private final int poolNumber;
+    private final Random rng;
 
-    public RouletteSelection(int poolNumber) {
+    public RouletteSelection(int poolNumber, Random rng) {
         this.poolNumber = poolNumber;
+        this.rng = rng;
     }
 
     @Override
     public List<Individual> select(List<Individual> population) {
         List<Individual> matingPool = new ArrayList<>();
-
         for (int i = 0; i < poolNumber; i++) {
             matingPool.add(get(population));
         }
-
         return matingPool;
     }
 
-    public Individual get(List<Individual> population) {
-        int size = population.size();
+    private Individual get(List<Individual> population) {
         double totalFitness = 0;
-        for (int i = 0; i < size; i++) {
-            totalFitness += population.get(i).getFitness();
+        for (Individual ind : population) {
+            totalFitness += ind.getFitness();
         }
 
-        double alpha = GlobalRandom.rdm.nextDouble(totalFitness);
-        double iSum = 0;
-        int j = 0;
-        while (iSum < alpha && j < size) {
-            iSum += population.get(j).getFitness();
-            j++;
+        double alpha = rng.nextDouble() * totalFitness;
+        
+        double currentSum = 0;
+        for (Individual ind : population) {
+            currentSum += ind.getFitness();
+            if (currentSum >= alpha) {
+                return ind.copy();
+            }
         }
-
-        return population.get(j).copy();
+        
+        return population.get(population.size() - 1).copy();
     }
 }

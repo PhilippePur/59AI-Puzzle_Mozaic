@@ -3,7 +3,6 @@ package mosaic.genetic.crossover;
 import java.util.Random;
 
 import mosaic.puzzle.Individual;
-import mosaic.util.GlobalRandom;
 
 /**
  * Implementasi konkrit dari CrossoverStrategy menggunakan One Point Crossover
@@ -14,8 +13,7 @@ import mosaic.util.GlobalRandom;
  * akan mendapat baris/kolom 1 hingga x dari parent1, dan x+1 hingga n dari
  * parent2
  * </p>
- * 
- * @author Greg
+ * * @author Greg
  */
 public class OnePointCrossover implements CrossoverStrategy {
 
@@ -26,11 +24,12 @@ public class OnePointCrossover implements CrossoverStrategy {
 
         Individual child = parent1.copy(); // ambil base untuk child
 
-        boolean slice = GlobalRandom.rdm.nextBoolean();
+        // Menggunakan rng lokal, bukan GlobalRandom agar thread-safe
+        boolean slice = rng.nextBoolean();
 
         // kalo true, maka potong row, kalo false, potong cols
         if (slice) {
-            int cut = GlobalRandom.rdm.nextInt(rows - 1) + 1;
+            int cut = rng.nextInt(rows - 1) + 1;
 
             for (int start = cut; start < rows; start++) {
                 for (int c = 0; c < cols; c++) {
@@ -40,7 +39,7 @@ public class OnePointCrossover implements CrossoverStrategy {
                 }
             }
         } else {
-            int cut = GlobalRandom.rdm.nextInt(cols - 1) + 1;
+            int cut = rng.nextInt(cols - 1) + 1;
 
             for (int c = cut; c < cols; c++) {
                 for (int r = 0; r < rows; r++) {

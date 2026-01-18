@@ -252,9 +252,10 @@ public class Individual {
      * </p>
      */
     public void calculateFitness() {
-
         double totalError = 0.0;
         List<Clue> clues = puzzle.getClues();
+
+        double maxPossibleError = 0.0;
 
         // Hitung akumulasi error dari seluruh clue
         for (Clue currentClue : clues) {
@@ -267,12 +268,10 @@ public class Individual {
 
             // Tambahkan selisih absolut ke total error
             totalError += Math.abs(blackCount - clueValue);
+            
+            // Hitung Maximum possible error 
+            maxPossibleError += Math.max(Math.abs(9 - clueValue), Math.abs(clueValue - 0));
         }
-
-        // Hitung Estimasi Maksimal Error yang mungkin terjadi (Worst Case)
-        // Asumsi terburuk adalah setiap clue meleset maksimal 9 poin (misal clue 0 tapi
-        // ada 9 hitam)
-        double maxPossibleError = clues.size() * 9.0;
 
         if (maxPossibleError == 0) {
             this.fitness = 1.0;
@@ -345,7 +344,11 @@ public class Individual {
         StringBuilder sb = new StringBuilder();
         for (int r = 0; r < puzzle.getRows(); r++) {
             for (int c = 0; c < puzzle.getCols(); c++) {
-                sb.append(grid[r][c] ? "#" : ".");
+                if(isFixed(r, c)){
+                    sb.append(grid[r][c] ? "$" : ",");
+                }else{
+                    sb.append(grid[r][c] ? "#" : ".");
+                }
                 sb.append(" ");
             }
             sb.append("\n");
