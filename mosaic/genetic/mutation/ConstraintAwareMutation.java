@@ -9,21 +9,53 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
 
+/**
+ * Strategi mutasi cerdas yang mencoba memperbaiki area di sekitar clue yang memiliki error.
+ * <p>
+ * Strategi ini menggunakan {@link PatternCache} untuk menemukan pola 3x3 yang valid secara lokal
+ * dan menyuntikkannya ke dalam individu. Mutasi hanya dijalankan berdasarkan probabilitas
+ * {@code mutationRate}.
+ * </p>
+ */
 public class ConstraintAwareMutation implements MutationStrategy {
 
     private final Random random;
     private final PatternCache patternCache;
+    private final double mutationRate;
 
-    public ConstraintAwareMutation(Random random) {
+    /**
+     * Konstruktor untuk inisialisasi strategi.
+     * @param random Generator angka acak.
+     * @param mutationRate Probabilitas terjadinya mutasi (0.0 - 1.0).
+     */
+    public ConstraintAwareMutation(Random random, double mutationRate) {
         if (random == null) {
             throw new IllegalArgumentException("Random generator tidak boleh null");
         }
         this.random = random;
         this.patternCache = PatternCache.getInstance();
+        this.mutationRate = mutationRate;
     }
 
+    /**
+     * Melakukan mutasi pada individu dengan memperbaiki area clue yang bermasalah.
+     * <p>
+     * Proses:
+     * 1. Cek probabilitas berdasarkan mutationRate.
+     * 2. Cari clue yang memiliki error (jumlah tetangga hitam tidak sesuai).
+     * 3. Pilih salah satu clue yang bermasalah.
+     * 4. Cari pola 3x3 yang valid untuk clue tersebut dan kompatibel dengan sel fixed di sekitarnya.
+     * 5. Terapkan pola baru ke grid individu.
+     * </p>
+     */
     @Override
     public void mutate(Individual individual, Puzzle puzzle) {
+        // 1. CEK PROBABILITAS (Gatekeeper)
+        if (random.nextDouble() > mutationRate) {
+            return;
+        }
+
+        // 2. Logika Mutasi
         List<Clue> problematicClues = findProblematicClues(individual, puzzle);
 
         if (problematicClues.isEmpty()) {
@@ -32,15 +64,17 @@ public class ConstraintAwareMutation implements MutationStrategy {
         }
 
         Clue selectedClue = selectClueToFix(problematicClues);
+        if (selectedClue == null) return;
+
         int centerR = selectedClue.getRow();
         int centerC = selectedClue.getCol();
 
-        // Get current state of 3x3 area
+        // Get current state & fixed mask
         boolean[][] currentState = get3x3State(individual, centerR, centerC);
         boolean[][] isFixed = get3x3FixedMask(individual, centerR, centerC);
 
-        // Get COMPATIBLE patterns (respecting fixed cells)
-        List<boolean[][]> compatiblePatterns = patternCache.getCompatiblePatterns(selectedClue.getValue(),currentState,isFixed);
+        // Get COMPATIBLE patterns
+        List<boolean[][]> compatiblePatterns = patternCache.getCompatiblePatterns(selectedClue.getValue(), currentState, isFixed);
 
         if (compatiblePatterns.isEmpty()) {
             fallbackBasicMutation(individual);
@@ -50,13 +84,12 @@ public class ConstraintAwareMutation implements MutationStrategy {
         boolean[][] newPattern = selectNewPattern(compatiblePatterns, individual, selectedClue);
         applyPatternToArea(individual, selectedClue, newPattern);
 
-        individual.markDirty(); // Tandai bahwa fitness perlu dihitung ulang
+        individual.markDirty(); 
     }
 
-    /**
-     * Mengambil state 3x3 dari individual pada area seputar centerR, centerC.
-     * Sel yang berada di luar batas papan dibiarkan false (default).
-     */
+    // --- Helper Methods ---
+
+    /** Mengambil snapshot area 3x3 dari grid individu saat ini. */
     private boolean[][] get3x3State(Individual individual, int centerR, int centerC) {
         boolean[][] state = new boolean[3][3];
         for (int dr = -1; dr <= 1; dr++) {
@@ -66,16 +99,12 @@ public class ConstraintAwareMutation implements MutationStrategy {
                 if (r >= 0 && r < individual.getRows() && c >= 0 && c < individual.getCols()) {
                     state[dr + 1][dc + 1] = individual.getCell(r, c);
                 }
-                // Sel di luar batas tetap false (default value untuk boolean array)
             }
         }
         return state;
     }
 
-    /**
-     * Mengambil mask fixed 3x3 dari individual pada area seputar centerR, centerC.
-     * Sel yang berada di luar batas papan dibiarkan false (tidak fixed, karena tidak ada).
-     */
+    /** Mengambil mask boolean yang menandakan sel mana yang 'fixed' di area 3x3. */
     private boolean[][] get3x3FixedMask(Individual individual, int centerR, int centerC) {
         boolean[][] isFixed = new boolean[3][3];
         for (int dr = -1; dr <= 1; dr++) {
@@ -85,62 +114,46 @@ public class ConstraintAwareMutation implements MutationStrategy {
                 if (r >= 0 && r < individual.getRows() && c >= 0 && c < individual.getCols()) {
                     isFixed[dr + 1][dc + 1] = individual.isFixed(r, c);
                 }
-                // Sel di luar batas tetap false (tidak ada sel, jadi tidak fixed)
             }
         }
         return isFixed;
     }
 
+    /** Mencari semua clue yang saat ini belum terpenuhi (jumlah tetangga hitam salah). */
     private List<Clue> findProblematicClues(Individual individual, Puzzle puzzle) {
         List<Clue> allClues = puzzle.getClues();
         List<ClueWithError> cluesWithError = new ArrayList<>();
 
-        // Hitung error untuk setiap clue sekaligus
         for (Clue clue : allClues) {
             int actualBlack = countBlackIn3x3Area(individual, clue.getRow(), clue.getCol());
             int error = Math.abs(actualBlack - clue.getValue());
-
             if (error > 0) {
                 cluesWithError.add(new ClueWithError(clue, error));
             }
         }
 
-        // Sort berdasarkan error (descending)
         cluesWithError.sort(Comparator.comparingInt(ClueWithError::getError).reversed());
 
-        // Extract hanya clue-nya
         List<Clue> problematic = new ArrayList<>();
         for (ClueWithError cwe : cluesWithError) {
             problematic.add(cwe.clue);
         }
-
         return problematic;
     }
 
-    // Helper class untuk simpan clue dan error-nya
+    /** Helper class internal untuk menyimpan clue beserta besaran errornya. */
     private static class ClueWithError {
         final Clue clue;
         final int error;
-
-        ClueWithError(Clue clue, int error) {
-            this.clue = clue;
-            this.error = error;
-        }
-
-        int getError() {
-            return error;
-        }
+        ClueWithError(Clue clue, int error) { this.clue = clue; this.error = error; }
+        int getError() { return error; }
     }
 
+    /** Memilih satu clue untuk diperbaiki, memprioritaskan yang errornya paling besar. */
     private Clue selectClueToFix(List<Clue> problematicClues) {
-        if (problematicClues.isEmpty())
-            return null;
-
-        if (problematicClues.size() <= 3) {
-            return problematicClues.get(0);
-        }
-
-        // EXPERIMENT
+        if (problematicClues.isEmpty()) return null;
+        if (problematicClues.size() <= 3) return problematicClues.get(0);
+        
         if (random.nextDouble() < 0.7) {
             return problematicClues.get(random.nextInt(Math.min(3, problematicClues.size())));
         } else {
@@ -148,13 +161,12 @@ public class ConstraintAwareMutation implements MutationStrategy {
         }
     }
 
+    /** Memilih pola baru secara acak dari daftar pola yang valid. */
     private boolean[][] selectNewPattern(List<boolean[][]> validPatterns, Individual individual, Clue clue) {
-        // Pilih random pattern
         return validPatterns.get(random.nextInt(validPatterns.size()));
-
-        // bisa juga ambil yang paling beda sama current biar semakin diverse
     }
 
+    /** Menerapkan pola 3x3 ke grid individu pada lokasi clue. */
     private void applyPatternToArea(Individual individual, Clue clue, boolean[][] pattern) {
         int centerR = clue.getRow();
         int centerC = clue.getCol();
@@ -163,41 +175,28 @@ public class ConstraintAwareMutation implements MutationStrategy {
             for (int dc = -1; dc <= 1; dc++) {
                 int r = centerR + dr;
                 int c = centerC + dc;
-
-                if (r >= 0 && r < individual.getRows() &&
-                        c >= 0 && c < individual.getCols() &&
-                        !individual.isFixed(r, c)) {
-
+                if (r >= 0 && r < individual.getRows() && c >= 0 && c < individual.getCols() && !individual.isFixed(r, c)) {
                     individual.setCell(r, c, pattern[dr + 1][dc + 1]);
                 }
             }
         }
     }
 
+    /** Mutasi fallback (1 bit flip) jika tidak ada pola constraint yang bisa diterapkan. */
     private void fallbackBasicMutation(Individual individual) {
-        // Mutation rate sangat rendah (0.1%) karena hanya fallback
-        boolean changed = false;
-        for (int r = 0; r < individual.getRows(); r++) {
-            for (int c = 0; c < individual.getCols(); c++) {
-                if (!individual.isFixed(r, c) && random.nextDouble() < 0.001) {
-                    individual.flipCell(r, c);
-                    changed = true;
-                }
-            }
-        }
-
-        if (changed) {
-            individual.markDirty();
+        int r = random.nextInt(individual.getRows());
+        int c = random.nextInt(individual.getCols());
+        if (!individual.isFixed(r, c)) {
+            individual.flipCell(r, c);
         }
     }
 
+    /** Menghitung jumlah sel hitam di area 3x3. */
     private int countBlackIn3x3Area(Individual individual, int centerR, int centerC) {
         int count = 0;
         for (int r = centerR - 1; r <= centerR + 1; r++) {
             for (int c = centerC - 1; c <= centerC + 1; c++) {
-                if (r >= 0 && r < individual.getRows() &&
-                        c >= 0 && c < individual.getCols() &&
-                        individual.getCell(r, c)) {
+                if (r >= 0 && r < individual.getRows() && c >= 0 && c < individual.getCols() && individual.getCell(r, c)) {
                     count++;
                 }
             }
@@ -209,5 +208,4 @@ public class ConstraintAwareMutation implements MutationStrategy {
     public String getStrategyName() {
         return "ConstraintAwareMutation";
     }
-
 }

@@ -1,0 +1,6 @@
+ConfigName,PopSize,MaxGen,CrossRate,MutRate,EliteCount,AvgFitness,AvgTimeMs,AvgGenerations,SuccessRate
+P100_SingleBlock_Tourn,100,500,0.85,0.90,2,0.99294,4146.80,497.90,0.03
+P100_TwoPoint_Tourn,100,500,0.85,0.90,2,0.99134,10765.07,487.43,0.03
+P100_TwoPoint_Trunc,100,500,0.85,0.90,2,0.99075,17537.00,485.90,0.03
+P100_OnePoint_Tourn,100,500,0.85,0.90,2,0.99164,4239.43,500.00,0.00
+P100_MultiBlock_Tourn,100,500,0.85,0.90,2,0.99085,11415.07,500.00,0.00

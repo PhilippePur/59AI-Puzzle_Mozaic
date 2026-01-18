@@ -20,13 +20,14 @@ import java.util.concurrent.*;
 /**
  * Kelas utama untuk menjalankan eksperimen otomatis pada algoritma genetik Mosaic Puzzle.
  * <p>
- * Kelas ini memfasilitasi pengujian berbagai konfigurasi hyperparameter (Grid Search)
- * secara paralel (multithreading) dengan jaminan hasil yang deterministik (fairness).
+ * UPDATE TAHAP 2:
+ * Fokus pada pengujian dampak Ukuran Populasi (Population Size) terhadap 5 kombinasi
+ * strategi terbaik (Top 5) yang ditemukan pada tahap sebelumnya.
  * </p>
  */
 public class MosaicExperiment {
 
-    private static final int TRIALS_PER_CONFIG = 30; // Jumlah pengulangan per skenario
+    private static final int TRIALS_PER_CONFIG = 30; // Jumlah pengulangan per skenario (Statistik)
     private static final int NUM_THREADS = Runtime.getRuntime().availableProcessors();
     
     // Seed tetap untuk setiap trial agar adil antar konfigurasi
@@ -39,12 +40,8 @@ public class MosaicExperiment {
         }
     }
 
-    /**
-     * Entry point eksperimen.
-     * @param args argumen baris perintah (opsional path file input)
-     */
     public static void main(String[] args) {
-        System.out.println("=== STARTING AUTOMATED EXPERIMENTS ===");
+        System.out.println("=== MOSAIC EXPERIMENT: STAGE 2 (POPULATION SCALING) ===");
         System.out.println("CPU Cores: " + NUM_THREADS);
 
         Puzzle puzzle = null;
@@ -67,15 +64,13 @@ public class MosaicExperiment {
                 puzzle.getRows(), puzzle.getCols(), puzzle.getClues().size());
 
         // 1. Apply Heuristics (Pre-processing)
-        System.out.println("\nApplying Heuristics to Puzzle for GA Experiments...");
-        // Menggunakan limit -1 (tanpa batas iterasi)
+        System.out.println("\nApplying Heuristics to Puzzle...");
         int fixedCount = HeuristicSolver.applyHeuristics(puzzle, -1);
         System.out.println("Heuristics applied. Fixed cells: " + fixedCount);
 
-        // 2. Run GA Experiments
+        // 2. Run Stage 2 Experiments
         try {
-            // Contoh pemanggilan eksperimen (Anda bisa uncomment sesuai kebutuhan)
-            runComparisonExperiment(puzzle);
+            runStage2PopulationExperiment(puzzle);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -84,37 +79,81 @@ public class MosaicExperiment {
     }
 
     /**
-     * Menjalankan skenario perbandingan beberapa konfigurasi.
+     * Menjalankan Eksperimen Tahap 2.
+     * Menguji 5 Strategi Terbaik dengan variasi Populasi: 100, 500, 1000, 5000.
      */
-    private static void runComparisonExperiment(Puzzle puzzle) throws IOException {
-        System.out.println("\nRunning Experiment: Strategy Comparison...");
-        String filename = "exp_strategy_comparison.csv";
-
+    private static void runStage2PopulationExperiment(Puzzle puzzle) throws IOException {
+        System.out.println("\nRunning Stage 3: Hyperparameter Tuning on Top 5 Strategies...");
+        String filename = "exp_stage3_hyperparameters.csv";
         List<ExperimentConfig> configs = new ArrayList<>();
-        
-        // Definisikan Skenario
-        // Config: Name, Pop, MaxGen, CrossRate, MutRate, Elite, MutStrat, CrossStrat, SelectStrat
-        
-        configs.add(new ExperimentConfig("Baseline", 100, 500, 0.8, 0.05, 2, "basic", "uniform", "tournament"));
-        configs.add(new ExperimentConfig("Adaptive-MultiBlock", 100, 500, 0.8, 0.0, 2, "adaptive", "multiblock", "tournament"));
-        configs.add(new ExperimentConfig("Constraint-Rank", 100, 500, 0.8, 0.0, 2, "constraint", "uniform", "rank"));
-        configs.add(new ExperimentConfig("HighPop-Roulette", 300, 500, 0.8, 0.05, 5, "basic", "uniform", "roulette"));
 
+        // --- DEFINISI RUANG PENCARIAN (GRID SEARCH) ---
+        int[] populationSizes = { 50, 100, 200 };
+        int[] maxGenerationsList = { 200, 500, 1000 };
+        double[] mutationRates = { 0.001, 0.005, 0.01, 0.05 };
+        double[] crossoverRates = { 0.6, 0.8, 0.9 };
+        int[] eliteCounts = { 2, 5 };
+
+        // --- DAFTAR 5 STRATEGI TERBAIK (Fix) ---
+        // Format: {Name, Mut, Cross, Sel}
+        String[][] topStrategies = {
+            {"SingleBlock_Tourn", "constraint", "singleblock", "tournament"}, // Top 1 (Eksploratif)
+            {"TwoPoint_Tourn", "constraint", "twopoint", "tournament"},       // Top 3 (Eksploratif)
+            {"TwoPoint_Trunc", "constraint", "twopoint", "truncation"},       // Top 6 (Eksploratif)
+            {"OnePoint_Tourn", "constraint", "onepoint", "tournament"},       // Top 2 (Eksploitatif)
+            {"MultiBlock_Tourn", "constraint", "multiblock", "tournament"}    // Top 5 (Eksploitatif)
+        };
+
+        // --- GENERATE KOMBINASI ---
+        for (String[] strat : topStrategies) {
+            String stratName = strat[0];
+            String mutType = strat[1];
+            String crossType = strat[2];
+            String selType = strat[3];
+
+            for (int pop : populationSizes) {
+                for (int maxGen : maxGenerationsList) {
+                    for (double mutRate : mutationRates) {
+                        for (double crossRate : crossoverRates) {
+                            for (int elite : eliteCounts) {
+                                
+                                // Format Nama Config: StratName_P[Pop]_G[Gen]_M[Mut]_C[Cross]_E[Elite]
+                                String configName = String.format("%s_P%d_G%d_M%.3f_C%.1f_E%d", 
+                                        stratName, pop, maxGen, mutRate, crossRate, elite);
+
+                                configs.add(new ExperimentConfig(configName, 
+                                        pop, maxGen, crossRate, mutRate, elite, 
+                                        mutType, crossType, selType));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        System.out.println("Total Configurations to Run: " + configs.size());
+        System.out.println("Total Trials: " + (configs.size() * TRIALS_PER_CONFIG));
+        System.out.println("Estimasi waktu: Sangat Lama. Silakan AFK.");
+        
+        // Jalankan Skenario
         runScenario(filename, puzzle, configs);
     }
 
     /**
      * Menjalankan satu set skenario eksperimen dan menyimpan hasilnya ke CSV.
+     * Juga menampilkan Top Hasil di akhir.
      */
     private static void runScenario(String filename, Puzzle puzzle, List<ExperimentConfig> configs) throws IOException {
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
-        
-        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
-            // Header CSV
-            writer.println("ConfigName,AvgFitness,AvgTimeMs,AvgGenerations,SuccessRate");
+        List<ConfigSummary> summaries = new ArrayList<>();
 
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            // Header CSV Updated: Menambahkan kolom detail hyperparameter
+            writer.println("ConfigName,PopSize,MaxGen,CrossRate,MutRate,EliteCount,AvgFitness,AvgTimeMs,AvgGenerations,SuccessRate");
+
+            int count = 1;
             for (ExperimentConfig cfg : configs) {
-                System.out.print("  Testing " + cfg.name + " ");
+                System.out.printf("[%d/%d] Testing %-35s ", count++, configs.size(), cfg.name);
                 
                 List<Future<RunResult>> futures = new ArrayList<>();
 
@@ -130,8 +169,8 @@ public class MosaicExperiment {
                 long totalTime = 0;
                 int totalGens = 0;
                 int successCount = 0;
+                
                 int done = 0;
-
                 for (Future<RunResult> f : futures) {
                     try {
                         RunResult res = f.get();
@@ -139,59 +178,65 @@ public class MosaicExperiment {
                         totalTime += res.timeMs;
                         totalGens += res.generations;
                         if (res.bestFitness >= 1.0) successCount++;
-                        
                         done++;
-                        if (done % 5 == 0) System.out.print(".");
-                        
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
-                System.out.println(" Done.");
-
-                // Averages
+                
+                // Calculate Averages
                 double avgFit = totalFitness / TRIALS_PER_CONFIG;
                 double avgTime = (double) totalTime / TRIALS_PER_CONFIG;
                 double avgGen = (double) totalGens / TRIALS_PER_CONFIG;
                 double successRate = (double) successCount / TRIALS_PER_CONFIG;
 
-                writer.printf("%s,%.4f,%.2f,%.2f,%.2f%n", 
-                    cfg.name, avgFit, avgTime, avgGen, successRate);
+                System.out.printf("-> Success: %3.0f%% | Fit: %.5f | Time: %5.0f ms%n", 
+                        successRate * 100, avgFit, avgTime);
+
+                // Write to CSV Updated: Mencetak nilai hyperparameter ke kolom terpisah
+                writer.printf("%s,%d,%d,%.2f,%.2f,%d,%.5f,%.2f,%.2f,%.2f%n", 
+                    cfg.name, 
+                    cfg.popSize, cfg.maxGen, cfg.crossRate, cfg.mutRate, cfg.eliteCount,
+                    avgFit, avgTime, avgGen, successRate);
                 writer.flush();
+
+                summaries.add(new ConfigSummary(cfg.name, avgFit, avgTime, successRate));
             }
         } finally {
             executor.shutdown();
         }
         System.out.println("  Results saved to " + filename);
+
+        printTopPerformers(summaries);
     }
 
     /**
-     * Menjalankan satu kali percobaan (Single Trial) dengan konfigurasi tertentu.
+     * Menjalankan satu kali percobaan (Single Trial).
      */
     private static RunResult runSingleTrial(Puzzle puzzle, ExperimentConfig cfg, long seed) {
         Random rng = new Random(seed);
 
-        // 1. Setup Parameter Maps
         Map<String, Object> mutParams = new HashMap<>();
         mutParams.put("rate", cfg.mutRate);
         
         Map<String, Object> crossParams = new HashMap<>();
-        crossParams.put("num_blocks", 3); // Default params for multiblock if used
+        crossParams.put("num_blocks", 3); 
+        crossParams.put("block_size", 3);
         
         Map<String, Object> selParams = new HashMap<>();
-        selParams.put("pool_size", cfg.popSize); // Pool size biasanya = pop size
-        selParams.put("k", 5); // Tournament k
+        selParams.put("pool_size", cfg.popSize); 
+        selParams.put("k", 5); 
+        selParams.put("portion", 50); 
+        selParams.put("pressure", 1.5); 
 
-        // 2. Create Strategies via Factories
         MutationStrategy mutStrat = MutationStrategyFactory.createStrategy(cfg.mutStrat, rng, mutParams);
         CrossoverStrategy crossStrat = CrossoverStrategyFactory.createStrategy(cfg.crossStrat, crossParams);
         SelectionStrategy selStrat = SelectionStrategyFactory.createStrategy(cfg.selStrat, rng, selParams);
 
-        // 3. Init GA
         GeneticAlgorithm ga = new GeneticAlgorithm(
             puzzle, rng, 
             cfg.popSize, cfg.maxGen, cfg.crossRate, cfg.mutRate, cfg.eliteCount,
-            crossStrat, mutStrat, selStrat // Inject semua strategi
+            crossStrat, mutStrat, selStrat
         );
 
         long start = System.currentTimeMillis();
@@ -199,6 +244,27 @@ public class MosaicExperiment {
         long end = System.currentTimeMillis();
 
         return new RunResult(best.getFitness(), end - start, ga.getCurrentGeneration());
+    }
+
+    private static void printTopPerformers(List<ConfigSummary> summaries) {
+        // Sort: Success Rate (Desc) -> Avg Fitness (Desc) -> Time (Asc)
+        summaries.sort((a, b) -> {
+            int cmpSuccess = Double.compare(b.successRate, a.successRate);
+            if (cmpSuccess != 0) return cmpSuccess;
+            int cmpFit = Double.compare(b.avgFitness, a.avgFitness);
+            if (cmpFit != 0) return cmpFit;
+            return Double.compare(a.avgTime, b.avgTime);
+        });
+
+        System.out.println("\n===== TOP 5 CONFIGURATIONS (STAGE 2) =====");
+        System.out.printf("%-40s | %-10s | %-10s | %-10s%n", "Config", "Success", "Fitness", "Time");
+        System.out.println("-----------------------------------------------------------------------------");
+        
+        for (int i = 0; i < Math.min(5, summaries.size()); i++) {
+            ConfigSummary s = summaries.get(i);
+            System.out.printf("%-40s | %-9.1f%% | %-10.5f | %-10.0f ms%n", 
+                s.name, s.successRate * 100, s.avgFitness, s.avgTime);
+        }
     }
 
     // --- Helper Classes ---
@@ -242,6 +308,17 @@ public class MosaicExperiment {
             this.mutStrat = mutS;
             this.crossStrat = crossS;
             this.selStrat = selS;
+        }
+    }
+
+    static class ConfigSummary {
+        String name;
+        double avgFitness;
+        double avgTime;
+        double successRate;
+
+        public ConfigSummary(String n, double f, double t, double s) {
+            this.name = n; this.avgFitness = f; this.avgTime = t; this.successRate = s;
         }
     }
 
