@@ -30,7 +30,7 @@ import java.util.concurrent.*;
 public class MosaicExperiment {
 
     private static final int TRIALS_PER_CONFIG = 1; // Jumlah pengulangan per skenario
-    private static final int NUM_THREADS = 3;
+    private static final int NUM_THREADS = Runtime.getRuntime().availableProcessors();
 
     // Seed tetap untuk setiap trial agar adil antar konfigurasi
     private static final List<Long> TRIAL_SEEDS = new ArrayList<>();
@@ -52,10 +52,10 @@ public class MosaicExperiment {
         System.out.println("CPU Cores: " + NUM_THREADS);
 
         // Folder input puzzle
-        String inputFolder = "mosaic/testcase/10x10/";
+        String inputFolder = "mosaic/testcase/15x15/";
 
         // Folder output hasil
-        String outputFolder = "mosaic/experiment_results/10x10/";
+        String outputFolder = "mosaic/experiment_results/15x15/";
         new File(outputFolder).mkdirs();
 
         List<File> puzzleFiles;
@@ -86,7 +86,7 @@ public class MosaicExperiment {
 
         System.out.println("\nRunning Experiment: Strategy Comparison...");
 
-        String csvFilename = outputFolder + "10x10_roulette_pool200_exp.csv";
+        String csvFilename = outputFolder + "15x15_selectionmethod_exp.csv";
 
         List<ExperimentConfig> configs = new ArrayList<>();
 
@@ -108,8 +108,8 @@ public class MosaicExperiment {
         int[] eliteCounts = { 5 };
 
         String[] mutations = { "constraint" };
-        String[] crossovers = { "twopoint" };
-        String[] selections = { "roulette" };
+        String[] crossovers = { "singleblock","onepoint", "twopoint", "uniform" };
+        String[] selections = { "tournament" };
 
         // Grid Search
         for (int pop : populationSizes) {
@@ -269,7 +269,7 @@ public class MosaicExperiment {
 
         Map<String, Object> selParams = new HashMap<>();
         selParams.put("pool_size", cfg.popSize); // Pool size biasanya = pop size
-        selParams.put("k", 2); // Tournament k
+        selParams.put("k", 5); // Tournament k
         selParams.put("pressure", 1.0); // selective pressure
         selParams.put("portion", 20); // portion %
 
