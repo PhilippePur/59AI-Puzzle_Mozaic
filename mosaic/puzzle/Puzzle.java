@@ -4,19 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * {@code Puzzle} merepresentasikan definisi soal Mosaic/Fill-a-Pix.
+ * {@code Puzzle} merepresentasikan definisi Mosaic/Fill-a-Pix.
  * <p>
  * Kelas ini berfungsi untuk:
  * <ul>
  * <li><Menyimpan dimensi papan permainan (baris dan kolom).</li>
  * <li>Menyimpan daftar petunjuk ({@link Clue}).</li>
- * <li>Membuat deduksi menggunakan heuristic awal
  * <li>Menyimpan status sel yang telah ditandai isFixed oleh proses heuristik awal.</li>
  * </ul>
  * <p>
  * Kelas ini dirancang agar {@code Individual} tidak perlu menyimpan
  * salinan status isFixed secara terpisah, melainkan cukup merujuk ke objek ini.
  * </p>
+ * @author Michael G, Michael P
  */
 public class Puzzle {
     

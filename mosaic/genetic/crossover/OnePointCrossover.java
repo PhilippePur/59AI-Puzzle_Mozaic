@@ -24,13 +24,12 @@ public class OnePointCrossover implements CrossoverStrategy {
 
         Individual child = parent1.copy(); // ambil base untuk child
 
-        // Menggunakan rng lokal, bukan GlobalRandom agar thread-safe
         boolean slice = rng.nextBoolean();
 
         // kalo true, maka potong row, kalo false, potong cols
         if (slice) {
             int cut = rng.nextInt(rows - 1) + 1;
-
+            // ambil (rows - cut) buah row kecuali yang sudah ditandai fixed
             for (int start = cut; start < rows; start++) {
                 for (int c = 0; c < cols; c++) {
                     if (!child.isFixed(start, c)) {
@@ -40,7 +39,7 @@ public class OnePointCrossover implements CrossoverStrategy {
             }
         } else {
             int cut = rng.nextInt(cols - 1) + 1;
-
+            // ambil (cols - cut) buah cols kecuali yang sudah ditandai fixed
             for (int c = cut; c < cols; c++) {
                 for (int r = 0; r < rows; r++) {
                     if (!child.isFixed(r, c)) {

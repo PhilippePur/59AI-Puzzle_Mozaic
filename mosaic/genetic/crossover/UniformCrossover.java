@@ -21,13 +21,11 @@ public class UniformCrossover implements CrossoverStrategy {
         int rows = child.getRows();
         int cols = child.getCols();
 
-        // Loop semua sel di papan
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
-                // Hanya memproses sel yang tidak fix
+                // Dengan peluang 50%, ganti value sel dengan value dari sel dengan koordinat
+                // yang sama pada parent2 jika tidak fixed
                 if (!child.isFixed(r, c)) {
-                    // Dengan peluang 50%, ganti value sel dengan value dari sel dengan koordinat
-                    // yang sama pada parent2
                     if (rng.nextBoolean()) {
                         boolean valueP2 = parent2.getCell(r, c);
                         child.setCell(r, c, valueP2);

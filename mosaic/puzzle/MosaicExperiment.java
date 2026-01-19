@@ -20,10 +20,9 @@ import java.util.concurrent.*;
 /**
  * Kelas utama untuk menjalankan eksperimen otomatis pada algoritma genetik Mosaic Puzzle.
  * <p>
- * UPDATE TAHAP 2:
- * Fokus pada pengujian dampak Ukuran Populasi (Population Size) terhadap 5 kombinasi
- * strategi terbaik (Top 5) yang ditemukan pada tahap sebelumnya.
+ * 
  * </p>
+ * @author kelas ini digenerate oleh LLM Gemini 3 Pro
  */
 public class MosaicExperiment {
 

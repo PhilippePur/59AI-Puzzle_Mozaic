@@ -9,40 +9,50 @@ import java.util.List;
 import java.util.Arrays;
 
 /**
- * Factory class untuk membuat instance strategi mutasi secara dinamis.
- * <p>
+ * Factory class yang bertugas menyediakan instance strategi mutasi secara
+ * dinamis.
  * Kelas ini memisahkan logika pembuatan objek dari logika bisnis utama,
- * memungkinkan pemilihan strategi mutasi berdasarkan string nama dan parameter konfigurasi.
- * </p>
- * @author Michael G
+ * memungkinkan pemilihan strategi
+ * hanya berdasarkan string nama dan parameter konfigurasi.
+ * * @author Michael G
  */
 public class MutationStrategyFactory {
 
-    /** Konstruktor private untuk mencegah instansiasi. */
-    private MutationStrategyFactory() {}
+    /**
+     * Konstruktor privat untuk mencegah instansiasi kelas utilitas ini.
+     */
+    private MutationStrategyFactory() {
+    }
 
     /**
-     * Membuat strategi mutasi berdasarkan tipe dan parameter yang diberikan.
+     * Membuat dan mengembalikan strategi mutasi yang sesuai berdasarkan parameter
+     * tipe.
+     * Metode ini menangani parsing parameter konfigurasi dan pemilihan implementasi
+     * konkret.
      *
-     * @param type   Jenis strategi mutasi (contoh: "basic", "constraint", "adaptive"). Tidak case-sensitive.
-     * @param random Generator angka acak yang spesifik untuk thread/eksperimen ini.
-     * @param params Map yang berisi parameter konfigurasi (wajib berisi "rate" untuk sebagian besar strategi).
-     * @return Instance {@link MutationStrategy} yang sesuai.
-     * @throws IllegalArgumentException jika tipe strategi tidak dikenali.
+     * @param type   Jenis strategi mutasi yang diinginkan pilihan : "basic",
+     *               "adaptive" , "hybrid" , "random" , "constraint"
+     * @param random Generator angka acak untuk menjamin sifat deterministik
+     *               eksperimen
+     * @param params Peta konfigurasi yang berisi parameter tambahan seperti rate
+     *               mutasi
+     * @return Objek strategi mutasi yang siap digunakan
+     * @throws IllegalArgumentException jika tipe strategi tidak dikenali
      */
     public static MutationStrategy createStrategy(String type, Random random, Map<String, Object> params) {
         String typeLower = type.toLowerCase();
 
-        // Ambil rate dari parameter, default 0.05 jika tidak ada
+        // Mengambil rate dari parameter atau menggunakan nilai default jika tidak
+        // tersedia
         double rate = 0.05;
         if (params != null && params.containsKey("rate")) {
             rate = (double) params.get("rate");
         }
 
         if ("basic".equals(typeLower)) {
-            return createBasicMutation(random, params);
+            return createBasicMutation(random, rate);
         } else if ("constraint".equals(typeLower) || "constraintaware".equals(typeLower)) {
-            return createConstraintAwareMutation(random, rate); // Pass rate here!
+            return createConstraintAwareMutation(random, rate);
         } else if ("adaptive".equals(typeLower)) {
             return createAdaptiveMutation(random, params);
         } else if ("hybrid".equals(typeLower)) {
@@ -54,33 +64,46 @@ public class MutationStrategyFactory {
         }
     }
 
-    /** Membuat strategi Basic Bit-Flip Mutation. */
-    private static MutationStrategy createBasicMutation(Random random, Map<String, Object> params) {
-        double rate = (double) params.getOrDefault("rate", 0.05);
+    /**
+     * Membentuk strategi Basic Mutation yang melakukan flip bit sederhana.
+     */
+    private static MutationStrategy createBasicMutation(Random random, double rate) {
         return new BasicMutation(rate, random);
     }
 
-    /** Membuat strategi Constraint Aware Mutation dengan rate spesifik. */
+    /**
+     * Membentuk strategi Constraint Aware Mutation yang memperbaiki area
+     * berdasarkan clue.
+     */
     private static MutationStrategy createConstraintAwareMutation(Random random, double rate) {
         return new ConstraintAwareMutation(random, rate);
     }
 
-    /** Membuat strategi Adaptive Mutation yang mengelola beberapa strategi dasar. */
+    /**
+     * Membentuk strategi Adaptive Mutation yang dapat berganti metode berdasarkan
+     * kondisi populasi.
+     * Strategi ini dibekali dengan kumpulan strategi dasar untuk fase eksplorasi
+     * dan eksploitasi.
+     */
     private static MutationStrategy createAdaptiveMutation(Random random, Map<String, Object> params) {
-        // Adaptive mutation strategy pool
+        double baseRate = (double) params.getOrDefault("rate", 0.05);
+
         List<MutationStrategy> baseStrategies = Arrays.asList(
-                new BasicMutation(0.05, random),
-                new BasicMutation(0.1, random),
-                new ConstraintAwareMutation(random, 0.05)); // Default rate untuk komponen adaptive
+                new BasicMutation(baseRate, random),
+                new BasicMutation(baseRate, random),
+                new ConstraintAwareMutation(random, baseRate));
 
         return new AdaptiveMutation(baseStrategies);
     }
 
-    /** Membuat strategi Hybrid yang menggabungkan Basic dan Constraint mutation secara probabilistik. */
+    /**
+     * Membentuk strategi Hybrid yang menggabungkan Basic dan Constraint mutation
+     * secara probabilistik.
+     * Berguna untuk menyeimbangkan antara pengacakan murni dan perbaikan terarah.
+     */
     private static MutationStrategy createHybridMutation(Random random, Map<String, Object> params) {
         double rate = (double) params.getOrDefault("rate", 0.05);
-        
-        // Hybrid: 50% basic, 50% constraint-aware
+
         return new MutationStrategy() {
             @Override
             public void mutate(Individual individual, Puzzle puzzle) {
@@ -98,24 +121,30 @@ public class MutationStrategyFactory {
         };
     }
 
-    /** Membuat strategi Random Mutation (sel, blok, baris/kolom acak) yang menghormati rate. */
+    /**
+     * Membentuk strategi Random Mutation yang melakukan berbagai jenis mutasi acak
+     * (sel, blok, baris, kolom)
+     */
     private static MutationStrategy createRandomMutation(Random random, double rate) {
         return new MutationStrategy() {
             @Override
             public void mutate(Individual individual, Puzzle puzzle) {
-                // Cek rate dulu (Gatekeeper)
-                if (random.nextDouble() > rate) return;
+
+                // memberi kesempatan dengan kemungkinan kecil untuk terjadi mutasi
+                if (random.nextDouble() > rate)
+                    return;
 
                 double choice = random.nextDouble();
+
                 if (choice < 0.33) {
-                    // Flip single random cell
+                    // mengubah satu sel acak
                     int r = random.nextInt(individual.getRows());
                     int c = random.nextInt(individual.getCols());
                     if (!individual.isFixed(r, c)) {
                         individual.flipCell(r, c);
                     }
                 } else if (choice < 0.66) {
-                    // Flip 3x3 block
+                    // mengubah satu blok area 3x3 acak
                     int centerR = 1 + random.nextInt(individual.getRows() - 2);
                     int centerC = 1 + random.nextInt(individual.getCols() - 2);
                     for (int dr = -1; dr <= 1; dr++) {
@@ -130,16 +159,18 @@ public class MutationStrategyFactory {
                         }
                     }
                 } else {
-                    // Flip random row/col
+                    // mengubah satu baris atau kolom secara acak
                     if (random.nextBoolean()) {
                         int r = random.nextInt(individual.getRows());
                         for (int c = 0; c < individual.getCols(); c++) {
-                            if (!individual.isFixed(r, c)) individual.flipCell(r, c);
+                            if (!individual.isFixed(r, c))
+                                individual.flipCell(r, c);
                         }
                     } else {
                         int c = random.nextInt(individual.getCols());
                         for (int r = 0; r < individual.getRows(); r++) {
-                            if (!individual.isFixed(r, c)) individual.flipCell(r, c);
+                            if (!individual.isFixed(r, c))
+                                individual.flipCell(r, c);
                         }
                     }
                 }

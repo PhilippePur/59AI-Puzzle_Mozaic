@@ -9,6 +9,7 @@ import mosaic.puzzle.Individual;
  * Memilih individu terbaik dari populasi sebanyak eliteCount dan di return ke dalam bentuk array.
  * Hasil array ini akan dibaca oleh {@link GeneticAlgorithm} dan akan dimasukkan ke dalam populasi baru.
  * </p>
+ * @author Michael G
  */
 public class Elitism {
     /**

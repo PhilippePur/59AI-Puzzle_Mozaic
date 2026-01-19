@@ -22,14 +22,16 @@ public class TwoPointCrossover implements CrossoverStrategy {
 
         Individual child = parent1.copy(); // ambil base untuk child
 
-        // Menggunakan rng lokal, bukan GlobalRandom agar thread-safe
         boolean slice = rng.nextBoolean();
 
         // kalo true, maka potong row, kalo false, potong cols
         if (slice) {
+            // pilih titik potong pertama di setengah bagian awal
             int cutStart = rng.nextInt(rows / 2);
+            // pilih titik potong kedua dari sisa bagian setelah pemotongan pertama 
             int cutEnd = rng.nextInt(rows - 1 - (cutStart + 1)) + (cutStart + 1);
-
+            
+            // tukar dengan parent 2 jika tidak fixed
             for (int start = cutStart; start <= cutEnd; start++) {
                 for (int c = 0; c < cols; c++) {
                     if (!child.isFixed(start, c)) {
@@ -38,9 +40,12 @@ public class TwoPointCrossover implements CrossoverStrategy {
                 }
             }
         } else {
+            // pilih titik potong pertama di setengah bagian awal
             int cutStart = rng.nextInt(cols / 2);
+            // pilih titik potong kedua dari sisa bagian setelah pemotongan pertama 
             int cutEnd = rng.nextInt(cols - 1 - (cutStart + 1)) + (cutStart + 1);
-
+            
+            // tukar dengan parent 2 jika tidak fixed
             for (int c = cutStart; c <= cutEnd; c++) {
                 for (int r = 0; r < rows; r++) {
                     if (!child.isFixed(r, c)) {

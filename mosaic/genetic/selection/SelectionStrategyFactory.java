@@ -4,26 +4,27 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Factory class untuk membuat instance strategi seleksi orang tua secara dinamis.
+ * Factory class untuk membuat instance strategi selection secara dinamis.
  * <p>
- * Kelas ini menerapkan pola desain Factory Method untuk memisahkan logika pembuatan objek
- * dari logika bisnis utama. Mendukung injeksi {@link Random} untuk kebutuhan multithreading
- * yang deterministik.
+ * Kelas ini menerapkan desain pattern Factory untuk mempermudah pembuatan objek
+ * dan memisahkan logika Instansiasi selection
+ * dari logika utama
  * </p>
- * @author Philip
+ * 
+ * @author Michael P
  */
 public class SelectionStrategyFactory {
 
-    /** Konstruktor private untuk mencegah instansiasi. */
+    /** Konstruktor private untuk mencegah instansiasi*/
     private SelectionStrategyFactory() {}
 
     /**
-     * Membuat strategi seleksi berdasarkan tipe dan parameter yang diberikan.
+     * Membuat strategi seleksi berdasarkan tipe dan parameter yang diberikan
      *
-     * @param type   Jenis strategy mis: "tournament", "roulette", "rank", "stochastic", "truncation"
-     * Tidak case-sensitive.
+     * @param type   Jenis strategy yang tersedia: "tournament", "roulette", "rank", "stochastic", "truncation"
+     * 
      * @param rng    Generator angka acak yang spesifik untuk thread/eksperimen ini 
-     * @param params Parameter konfigurasi seperti ukuran pool, nilai k, pressure, dll
+     * @param params Parameter konfigurasi seperti ukuran pool, nilai k, pressure, dll kalau ada 
      * @return Instance {@link SelectionStrategy} yang sesuai
      * @throws IllegalArgumentException exception kalau tipe strategi tidak dikenali
      */

@@ -18,7 +18,9 @@ import java.util.Random;
  * heuristik awal
  * </p>
  * 
- * @author
+ * @author Michael G, Michael P membuat struktur dasar dan ide 
+ *         implementasi sebagian method dibuat dengan bantuan LLM Gemini 3 Pro
+ * 
  */
 public class Individual {
 
@@ -268,8 +270,8 @@ public class Individual {
 
             // Tambahkan selisih absolut ke total error
             totalError += Math.abs(blackCount - clueValue);
-            
-            // Hitung Maximum possible error 
+
+            // Hitung Maximum possible error
             maxPossibleError += Math.max(Math.abs(9 - clueValue), Math.abs(clueValue - 0));
         }
 
@@ -344,9 +346,9 @@ public class Individual {
         StringBuilder sb = new StringBuilder();
         for (int r = 0; r < puzzle.getRows(); r++) {
             for (int c = 0; c < puzzle.getCols(); c++) {
-                if(isFixed(r, c)){
+                if (isFixed(r, c)) {
                     sb.append(grid[r][c] ? "$" : ",");
-                }else{
+                } else {
                     sb.append(grid[r][c] ? "#" : ".");
                 }
                 sb.append(" ");

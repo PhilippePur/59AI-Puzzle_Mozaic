@@ -26,7 +26,7 @@ public class SingleBlockCrossover implements CrossoverStrategy {
         // endCol), (endRow, startCol), (endRow, endCol)
         // yang akan digunakan untuk memasukkan block dari parent2 ke dalam child
 
-        // 1. Memilih 2 index baris, 1 sebagai baris start dan 1 sebagai baris end
+        // Pilih 2 index baris, 1 sebagai baris start dan 1 sebagai baris end
         int r1 = rng.nextInt(parent1.getRows());
         int r2 = rng.nextInt(parent1.getRows());
 
@@ -34,7 +34,7 @@ public class SingleBlockCrossover implements CrossoverStrategy {
         int startRow = Math.min(r1, r2);
         int endRow = Math.max(r1, r2);
 
-        // 2. Memilih 2 index kolom, 1 sebagai kolom start dan 1 sebagai kolom end
+        // Pilih 2 index kolom, 1 sebagai kolom start dan 1 sebagai kolom end
         int c1 = rng.nextInt(parent1.getCols());
         int c2 = rng.nextInt(parent1.getCols());
 

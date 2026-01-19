@@ -4,7 +4,7 @@ import java.util.Random;
 import mosaic.puzzle.Individual;
 
 /**
- * Implementasi konkrit dari CrossoverStrategy menggunakan crossover multi block
+ * Implementasi dari CrossoverStrategy 
  * Strategi ini merupakan improvement dari Single Block, di mana block yang dipilih bisa beberapa (lebih dari satu)
  * Ukuran block juga bisa bervariasi tergantung konfigurasinya (misal mau 3x3 semua, 4x4 semua, dll)
  * Child akan mendapatkan gen block block tersebut dari parent2, dan sisanya didapat dari parent1
@@ -34,22 +34,21 @@ public class MultiBlockCrossover implements CrossoverStrategy {
         this.blockSize = blockSize;
     }
 
-    // Note pemilihan parameter: sesuaikan numberOfBlocks dan blockSize tergantung dengan ukuran papan, agar parent1 dan parent2 tetap memiliki porsi yang sama.
 
     @Override
     public Individual crossover(Individual parent1, Individual parent2, Random rng) {
         Individual child = parent1.copy();
         int rows = child.getRows();
         int cols = child.getCols();
-        // Looping untuk sebanyak jumlah block yang diinginkan
+        // Looping sebanyak jumlah block yang diinginkan
         for (int i = 0; i < numberOfBlocks; i++) {
             // Untuk setiap block, dipilih areanya sesuai dengan ukurannya
 
-            // 1. Memilih titik pojok kiri atas block secara random
+            //  Pilih titik pojok kiri atas block secara random
             int startRow = rng.nextInt(rows);
             int startCol = rng.nextInt(cols);
 
-            // 2. Untuk area sebesar ukuran block yang dimulai dari titik pojok kiri atas yang sudah dipilih, ditukar gen nya
+            // Tukar gen untuk area sebesar ukuran block yang dimulai dari titik pojok kiri atas yang sudah dipilih
             for (int r = startRow; r < startRow + blockSize; r++) {
                 for (int c = startCol; c < startCol + blockSize; c++) {
                     // Cek apakah masih dalam batas papan dan apakah gen fix, jika aman maka lanjut tukar
@@ -64,6 +63,4 @@ public class MultiBlockCrossover implements CrossoverStrategy {
         return child;
     }
 
-
-    // Alternatif lain: buat numberOfBlocks dan blockSize nya random (bervariasi ukurannya)
 }

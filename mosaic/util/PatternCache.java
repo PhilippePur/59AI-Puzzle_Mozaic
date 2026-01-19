@@ -16,6 +16,8 @@ import java.util.Map;
  * Kelas ini menerapkan Singleton Pattern karena hanya dibutuhkan
  * satu instance saja selama program berjalan. Semua pola akan
  * diprekomputasi di awal agar akses berikutnya bersifat O(1).
+ * @author Michael P membuat struktur dan ide awal
+ * implementasi sebagian method dibantu oleh LLM Gemini Pro 3 
  */
 public class PatternCache {
 

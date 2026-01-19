@@ -16,6 +16,8 @@ import java.util.Comparator;
  * dan menyuntikkannya ke dalam individu. Mutasi hanya dijalankan berdasarkan probabilitas
  * {@code mutationRate}.
  * </p>
+ * @author Michael G untuk ide dan struktur dasar 
+ * implementasi beberapa method dibantu dengan LLM Gemini 3 Pro
  */
 public class ConstraintAwareMutation implements MutationStrategy {
 
@@ -73,7 +75,6 @@ public class ConstraintAwareMutation implements MutationStrategy {
         boolean[][] currentState = get3x3State(individual, centerR, centerC);
         boolean[][] isFixed = get3x3FixedMask(individual, centerR, centerC);
 
-        // Get COMPATIBLE patterns
         List<boolean[][]> compatiblePatterns = patternCache.getCompatiblePatterns(selectedClue.getValue(), currentState, isFixed);
 
         if (compatiblePatterns.isEmpty()) {
@@ -87,7 +88,6 @@ public class ConstraintAwareMutation implements MutationStrategy {
         individual.markDirty(); 
     }
 
-    // --- Helper Methods ---
 
     /** Mengambil snapshot area 3x3 dari grid individu saat ini. */
     private boolean[][] get3x3State(Individual individual, int centerR, int centerC) {

@@ -1,44 +1,50 @@
 package mosaic.puzzle;
 
-
 /**
- * Kelas utilitas untuk menerapkan aturan heuristik logika pada Puzzle.
+ * Kelas untuk menerapkan aturan heuristik logika pada @param Puzzle.
  * <p>
  * Kelas ini menerapkan aturan heurstic pasti untuk mengunci sel-sel yang
- * memiliki jawaban pasti
- * sebelum Algoritma Genetik dimulai, sehingga mengurangi ruang pencarian.
+ * memiliki jawaban pasti sebelum Algoritma Genetik dimulai,
+ * sehingga mengurangi ruang pencarian.
  * </p>
+ * 
+ * @author Michael P, Gregorius J membuat struktur dasar dan ide
+ *         implementasi sebagian method dibuat dengan bantuan LLM Gemini 3 Pro
+ * 
  */
 public class HeuristicSolver {
 
     /**
      * Menjalankan seluruh aturan heuristik pada puzzle.
-     * Metode ini sebaiknya dipanggil satu kali sebelum inisialisasi populasi.
+     * Metode ini hanya dipanggil satu kali sebelum inisialisasi populasi.
      * * @param puzzle Objek puzzle yang akan diproses
      * ;
-     * @param limit batas maksimal iterasi pengisian inisialisasi awal, agar tidak
-     *              terlalu lama
-     *              jika -1 artinya tidak ada batasan, nilai harus positif
      * 
-     * @return jumlah total sel yang berhasil dikunci (fixed)
+     * @param limit batas maksimal iterasi pengisian inisialisasi awal, agar tidak
+     *              terlalu lama jika -1 artinya tidak ada batasan. Secara default
+     *              nilai ini diset -1 di main class, namun jika ingin digunakan
+     *              nilai harus positif int
+     * 
+     * @return jumlah total sel yang dikunci oleh heuristik
      */
 
     public static int applyHeuristics(Puzzle puzzle, int limit) {
         int initialFixed = countFixedCells(puzzle);
         int counter = 0;
-        // Jika limit diset -1 maka artinya tidak perlu ada limit
         if (limit == -1) {
             limit = Integer.MAX_VALUE;
         }
         boolean changed = true;
-        // Lakukan loop terus menerus sampai tidak ada lagi sel baru yang bisa dikunci,
-        // atau hingga melebihi batas iterasi tertentu
-        while (changed && counter <= limit) {
+        /**
+         * Lakukan loop terus menerus sampai tidak ada lagi sel baru yang bisa
+         * dikunci,atau hingga batas iterasi
+         */
+        while (changed && counter < limit) {
             int fixedBefore = countFixedCells(puzzle);
 
-            applyBasicAndCapacityRules(puzzle); // Menangani 0, 9 (Tengah), 6 (tepi sisi), 4 (Pojok)
-            applyOrthogonalRules(puzzle); // Aturan Selisih 3 & 2 (Horizontal/Vertikal)
-            applyDiagonalRules(puzzle); // Aturan Selisih 5 (Diagonal)
+            applyBasicAndCapacityRules(puzzle);
+            applyOrthogonalRules(puzzle);
+            applyDiagonalRules(puzzle);
 
             int fixedAfter = countFixedCells(puzzle);
             changed = fixedAfter > fixedBefore;
@@ -50,7 +56,7 @@ public class HeuristicSolver {
     }
 
     /**
-     * Digunakan untuk menghitung berapa jumlah cell yang difixed pada puzzle
+     * Digunakan untuk menghitung berapa jumlah cell yang sudah di fixed pada puzzle
      * 
      * @param puzzle object puzzle yang akan diproses
      * @return jumlah fixed cell yang ada pada puzzle
@@ -81,10 +87,9 @@ public class HeuristicSolver {
             if (clue.getValue() == 0) {
                 fillArea3x3(puzzle, clue.getRow(), clue.getCol(), false);
             } else {
-                // Hitung berapa banyak tetangga yang valid
                 int validNeighbors = countValidNeighbors(puzzle, clue.getRow(), clue.getCol());
 
-                // Jika nilai clue sama dengan jumlah kapasitas tetangga, maka semuanya PASTI
+                // Jika nilai clue sama dengan jumlah tetangga, maka semuanya PASTI
                 // HITAM
                 if (clue.getValue() == validNeighbors) {
                     fillArea3x3(puzzle, clue.getRow(), clue.getCol(), true);
@@ -104,16 +109,17 @@ public class HeuristicSolver {
             int r = clueA.getRow();
             int c = clueA.getCol();
 
-            // Cek Tetangga KANAN
+            // apply aturan angka bersebelahan untuk horizontal
+            // cek tetangga kanan
             Clue clueB = puzzle.getClueAt(r, c + 1);
             if (clueB != null) {
                 int diff = clueA.getValue() - clueB.getValue();
 
-                // Area Unik adalah area yang tidak beririsan terhadap suatu clue lain
-                // Area Unik A terhadap B ada di kolom kiri (c - 1)
-                // Area Unik B terhadap A ada di kolom kanan (c + 2)
+                // area Unik adalah area yang tidak beririsan terhadap suatu clue lain
+                // area Unik A terhadap B ada di kolom kiri (c - 1)
+                // area Unik B terhadap A ada di kolom kanan (c + 2)
 
-                // Hitung kapasitas valid area unik (untuk menangani kasus pinggir papan)
+                // hitung kapasitas valid area unik
                 int validCellsA = countValidCellsInColumn(puzzle, r, c - 1);
                 int validCellsB = countValidCellsInColumn(puzzle, r, c + 2);
 
@@ -129,14 +135,15 @@ public class HeuristicSolver {
                 }
             }
 
-            // Cek Tetangga BAWAH
+            // apply aturan angka bersebelahan untuk vertikal
+            // cek tetangga bawah
             Clue clueBottom = puzzle.getClueAt(r + 1, c);
             if (clueBottom != null) {
                 int diff = clueA.getValue() - clueBottom.getValue();
 
-                // Area Unik adalah area yang tidak beririsan terhadap suatu clue lain
-                // Area Unik A terhadap B ada di baris atas (r - 1)
-                // Area Unik B terhadap A ada di baris bawah (r + 2)
+                // area Unik adalah area yang tidak beririsan terhadap suatu clue lain
+                // area Unik A terhadap B ada di baris atas (r - 1)
+                // area Unik B terhadap A ada di baris bawah (r + 2)
 
                 int validCellsA = countValidCellsInRow(puzzle, r - 1, c);
                 int validCellsB = countValidCellsInRow(puzzle, r + 2, c);
@@ -164,42 +171,50 @@ public class HeuristicSolver {
             int r = clueA.getRow();
             int c = clueA.getCol();
 
+            // apply aturan angka bersebelahan diagonal untuk miring
+            // dengan kemiringan (gradien) negatif
             // Cek Diagonal Kanan-Bawah
             Clue clueB = puzzle.getClueAt(r + 1, c + 1);
             if (clueB != null) {
                 int diff = clueA.getValue() - clueB.getValue();
 
-                // Area Unik adalah area yang tidak beririsan terhadap suatu clue lain
-                // Area Unik A terhadap B: Bentuk L terbalik di kiri-atas
-                // Area Unik B terhadap A: Bentuk L di kanan-bawah
+                // area Unik adalah area yang tidak beririsan terhadap suatu clue lain
+                // area Unik A terhadap B: Bentuk L terbalik di kiri-atas
+                // area Unik B terhadap A: Bentuk L di kanan-bawah
 
-                // Validasi kapasitas (maksimal 5, bisa kurang jika di pojok)
+                // Validasi kapasitas (maksimal 5, bisa kurang kalau di pojok)
                 int validA = countValidLShape(puzzle, r, c, -1, -1); // L di kiri-atas relative thd A
                 int validB = countValidLShape(puzzle, r + 1, c + 1, 1, 1); // L di kanan-bawah relative thd B
 
-                // jika selisihnya adalah jumlah cell valid A maka fill area unik A terhadap B (kalau A > B)
+                // jika selisihnya adalah jumlah cell valid A maka fill area unik A terhadap B
+                // (kalau A > B)
                 if (diff == validA) {
-                    fillLShape(puzzle, r, c, -1, -1, true); 
-                    fillLShape(puzzle, r + 1, c + 1, 1, 1, false); 
-                // jika selisihnya adalah jumlah cell valid B maka fill area unik B terhadap A (kalau A < B)
-                } else if (diff == -validB) { 
+                    fillLShape(puzzle, r, c, -1, -1, true);
+                    fillLShape(puzzle, r + 1, c + 1, 1, 1, false);
+                    // jika selisihnya adalah jumlah cell valid B maka fill area unik B terhadap A
+                    // (kalau A < B)
+                } else if (diff == -validB) {
                     fillLShape(puzzle, r, c, -1, -1, false);
                     fillLShape(puzzle, r + 1, c + 1, 1, 1, true);
                 }
             }
-            
+
+            // apply aturan angka bersebelahan diagonal untuk miring
+            // dengan kemiringan(gradien) negatif
             // Cek Diagonal Kiri-Bawah
             Clue clueBL = puzzle.getClueAt(r + 1, c - 1);
             if (clueBL != null) {
                 int diff = clueA.getValue() - clueBL.getValue();
-                int validA = countValidLShape(puzzle, r, c, -1, 1); // L di kanan-atas relative thd A 
+                int validA = countValidLShape(puzzle, r, c, -1, 1); // L di kanan-atas relative thd A
                 int validB = countValidLShape(puzzle, r + 1, c - 1, 1, -1); // L di kiri-bawah relative thd B
-                
-                // jika selisihnya adalah jumlah cell valid A maka fill area unik A terhadap B (kalau A > B)
+
+                // jika selisihnya adalah jumlah cell valid A maka fill area unik A terhadap B
+                // (kalau A > B)
                 if (diff == validA) {
                     fillLShape(puzzle, r, c, -1, 1, true);
                     fillLShape(puzzle, r + 1, c - 1, 1, -1, false);
-                // jika selisihnya adalah jumlah cell valid B maka fill area unik B terhadap A (kalau A < B)
+                    // jika selisihnya adalah jumlah cell valid B maka fill area unik B terhadap A
+                    // (kalau A < B)
                 } else if (diff == -validB) {
                     fillLShape(puzzle, r, c, -1, 1, false);
                     fillLShape(puzzle, r + 1, c - 1, 1, -1, true);
@@ -212,7 +227,8 @@ public class HeuristicSolver {
      * Menghitung jumlah tetangga yang valid (berada di dalam papan) untuk suatu
      * koordinat clue.
      * Digunakan untuk mengecek kapasitas maksimal sebuah clue.
-     * @param puzzle object puzzle yang akan diproses
+     * 
+     * @param puzzle  object puzzle yang akan diproses
      * @param centerR letak baris clue
      * @param centerC letak kolom clue
      */
@@ -229,7 +245,8 @@ public class HeuristicSolver {
     }
 
     /**
-     * Digunakan untuk mengisi area 3 x 3 yang valid dengan {@code value}
+     * Digunakan untuk mengisi area 3 x 3 yang valid dengan {@param value}
+     * sudah menangani kondisi di sisi atau di pojok
      * 
      * @param puzzle  Objek puzzle yang akan diproses
      * @param centerR letak baris clue
@@ -248,7 +265,7 @@ public class HeuristicSolver {
 
     /**
      * Digunakan untuk menghitung berapa total cell yang valid (dalam papan) pada
-     * suatu kolom (atas, tengah, bawah)
+     * suatu kolom 3 x 1 (atas, tengah, bawah)
      * 
      * @param puzzle
      * @param centerR
@@ -265,8 +282,7 @@ public class HeuristicSolver {
     }
 
     /**
-     * Digunakan untuk mengisi 3 buah cell (atas, tengah, bawah) pada suatu kolom
-     * jika valid
+     * Digunakan untuk mengisi suatu kolom 3 x 1 (atas, tengah, bawah)
      * 
      * @param puzzle
      * @param centerR
@@ -283,7 +299,7 @@ public class HeuristicSolver {
 
     /**
      * Digunakan untuk menghitung berapa jumlah cell yang valid (dalam papan) pada
-     * suatu baris (kiri, tengah, kanan)
+     * suatu baris 1 x 3 (kiri, tengah, kanan)
      * 
      * @param puzzle
      * @param targetR
@@ -300,7 +316,7 @@ public class HeuristicSolver {
     }
 
     /**
-     * Digunakan untuk mengisi 3 buah cell (atas, tengah, bawah) dalam suatu baris
+     * Digunakan untuk mengisi 3 buah cell (kiri, tengah, kanan) dalam suatu baris
      * jika valid
      * 
      * @param puzzle

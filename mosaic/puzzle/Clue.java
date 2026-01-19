@@ -5,6 +5,7 @@ package mosaic.puzzle;
  * <p>
  * Sebuah clue memiliki posisi koordinat (baris dan kolom) dan nilai angka yang menunjukkan berapa banyak sel hitam di sekitarnya (termasuk dirinya sendiri).
  * </p>
+ * @author Michael G
  */
 public class Clue {
     /** Indeks baris. */
