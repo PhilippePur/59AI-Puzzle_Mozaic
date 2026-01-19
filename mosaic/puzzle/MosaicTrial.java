@@ -37,7 +37,7 @@ public class MosaicTrial {
     public static void main(String[] args) throws Exception {
 
         String folderPath = "mosaic/testcase/10x10";
-        String outputFolder = "mosaic/outputnembak/10x10/";
+        String outputFolder = "mosaic/exp_trial/10x10/";
         String summaryPath = outputFolder + "/summary.txt";
 
         new File(outputFolder).mkdirs();
@@ -54,11 +54,11 @@ public class MosaicTrial {
         // GRID SEARCH PARAMETERS
         // =======================
 
-        int[] populationSizes = { 200 };
+        int[] populationSizes = { 50, 100, 200 };
         int[] maxGenerationsList = { 1000 };
         double[] mutationRates = { 0.001 };
-        double[] crossoverRates = { 0.6 };
-        int[] eliteCounts = { 2 };
+        double[] crossoverRates = { 0.85 };
+        int[] eliteCounts = { 5 };
 
         String[] mutationTypes = { "constraint" };
         String[] crossoverTypes = { "twopoint" };
@@ -98,6 +98,10 @@ public class MosaicTrial {
                                         System.out.println("\n======================================");
                                         System.out.println("Running Config: " + configName);
                                         System.out.println("======================================");
+
+                                        long seed = 12345L;
+
+                                        GlobalRandom.rdm.setSeed(seed);
 
                                         double[] result = runConfig(files, outputPath,
                                                 popSize, maxGen, mutRate, crossRate, elite,

@@ -1,0 +1,2 @@
+ConfigName,AvgFitness,AvgTimeMs,AvgGenerations,SuccessRate
+POP200_GEN1000_MUT0.0010_CROSS0.850_ELITE5_Mconstraint_Ctwopoint_Stournament,0.9938,22717.00,1000.00,0.00

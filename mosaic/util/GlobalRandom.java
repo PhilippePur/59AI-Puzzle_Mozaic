@@ -5,7 +5,8 @@ import java.util.*;
 /**
  * Kelas yang menyediakan Random Number Generator global.
  * <p>
- * Digunakan untuk memastikan hanya 1 Random Number Generator yang digunakan dan dapat direproduksi (deterministic) jika seed-nya diatur.
+ * Digunakan untuk memastikan hanya 1 Random Number Generator yang digunakan dan
+ * dapat direproduksi (deterministic) jika seed-nya diatur.
  * </p>
  */
 public class GlobalRandom {

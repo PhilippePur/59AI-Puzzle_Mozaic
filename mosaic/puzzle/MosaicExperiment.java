@@ -86,7 +86,7 @@ public class MosaicExperiment {
 
         System.out.println("\nRunning Experiment: Strategy Comparison...");
 
-        String csvFilename = outputFolder + "15x15_selectionmethod_exp.csv";
+        String csvFilename = outputFolder + "15x15_linearrank_sp1.0_pool100_exp.csv";
 
         List<ExperimentConfig> configs = new ArrayList<>();
 
@@ -104,11 +104,11 @@ public class MosaicExperiment {
         int[] populationSizes = { 200 };
         int[] generations = { 1000 };
         double[] crossoverRates = { 0.85 };
-        double[] mutationRates = { 0.001 };
+        double[] mutationRates = { 0.01, 0.03 };
         int[] eliteCounts = { 5 };
 
         String[] mutations = { "constraint" };
-        String[] crossovers = { "singleblock","onepoint", "twopoint", "uniform" };
+        String[] crossovers = { "twopoint" };
         String[] selections = { "tournament" };
 
         // Grid Search
@@ -268,10 +268,11 @@ public class MosaicExperiment {
         crossParams.put("num_blocks", 3); // Default params for multiblock if used
 
         Map<String, Object> selParams = new HashMap<>();
-        selParams.put("pool_size", cfg.popSize); // Pool size biasanya = pop size
+        // selParams.put("pool_size", cfg.popSize); // Pool size biasanya = pop size
+        selParams.put("pool_size", (int) ((double) cfg.popSize / 2)); // Pool size biasanya = pop size
         selParams.put("k", 5); // Tournament k
         selParams.put("pressure", 1.0); // selective pressure
-        selParams.put("portion", 20); // portion %
+        selParams.put("portion", 50); // portion %
 
         // 2. Create Strategies via Factories
         MutationStrategy mutStrat = MutationStrategyFactory.createStrategy(cfg.mutStrat, rng, mutParams);

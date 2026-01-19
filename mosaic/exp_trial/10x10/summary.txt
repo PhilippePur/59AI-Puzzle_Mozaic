@@ -1,0 +1,13 @@
+======================================
+GRID SEARCH SUMMARY
+======================================
+
+BEST BY SOLVED COUNT:
+Config : POP100_GEN1000_MUT0.001_CROSS0.85_ELITE5_Mconstraint_Ctwopoint_Stournament
+Solved : 2
+AvgFit : 0.9938412661665724
+
+BEST BY AVERAGE FITNESS:
+Config : POP200_GEN1000_MUT0.001_CROSS0.85_ELITE5_Mconstraint_Ctwopoint_Stournament
+Solved : 2
+AvgFit : 0.9950856352865001
