@@ -29,9 +29,6 @@ public class ConstraintAwareMutation implements MutationStrategy {
      * @param mutationRate Probabilitas terjadinya mutasi (0.0 - 1.0).
      */
     public ConstraintAwareMutation(Random random, double mutationRate) {
-        if (random == null) {
-            throw new IllegalArgumentException("Random generator tidak boleh null");
-        }
         this.random = random;
         this.patternCache = PatternCache.getInstance();
         this.mutationRate = mutationRate;
@@ -46,7 +43,11 @@ public class ConstraintAwareMutation implements MutationStrategy {
      * 3. Pilih salah satu clue yang bermasalah.
      * 4. Cari pola 3x3 yang valid untuk clue tersebut dan kompatibel dengan sel fixed di sekitarnya.
      * 5. Terapkan pola baru ke grid individu.
+     * 
+     * PENTING: Jika tidak ada compatible pattern ditemukan, throw exception untuk discard individual.
+     * Ini menunjukkan individual invalid dan harus dihilangkan dari evolusi.
      * </p>
+     * @throws IllegalStateException jika incompatibility detected (individual harus di-discard)
      */
     @Override
     public void mutate(Individual individual, Puzzle puzzle) {
@@ -59,7 +60,7 @@ public class ConstraintAwareMutation implements MutationStrategy {
         List<Clue> problematicClues = findProblematicClues(individual, puzzle);
 
         if (problematicClues.isEmpty()) {
-            fallbackBasicMutation(individual);
+            // Tidak ada clue dengan error, tidak perlu mutasi
             return;
         }
 
@@ -74,11 +75,16 @@ public class ConstraintAwareMutation implements MutationStrategy {
         boolean[][] isFixed = get3x3FixedMask(individual, centerR, centerC);
 
         // Get COMPATIBLE patterns
-        List<boolean[][]> compatiblePatterns = patternCache.getCompatiblePatterns(selectedClue.getValue(), currentState, isFixed);
+        List<boolean[][]> compatiblePatterns = patternCache.getCompatiblePatterns(
+            selectedClue.getValue(), currentState, isFixed);
 
         if (compatiblePatterns.isEmpty()) {
-            fallbackBasicMutation(individual);
-            return;
+            // INCOMPATIBILITY DETECTED!
+            // Individual ini invalid, harus di-discard
+            throw new IllegalStateException(
+                "Constraint incompatibility at clue (" + centerR + "," + centerC + ") value=" + selectedClue.getValue() + 
+                ". Individual is invalid and must be discarded."
+            );
         }
 
         boolean[][] newPattern = selectNewPattern(compatiblePatterns, individual, selectedClue);
@@ -179,15 +185,6 @@ public class ConstraintAwareMutation implements MutationStrategy {
                     individual.setCell(r, c, pattern[dr + 1][dc + 1]);
                 }
             }
-        }
-    }
-
-    /** Mutasi fallback (1 bit flip) jika tidak ada pola constraint yang bisa diterapkan. */
-    private void fallbackBasicMutation(Individual individual) {
-        int r = random.nextInt(individual.getRows());
-        int c = random.nextInt(individual.getCols());
-        if (!individual.isFixed(r, c)) {
-            individual.flipCell(r, c);
         }
     }
 

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * 
  * {@code PatternCache} adalah kelas utilitas yang bertugas untuk
  * menghasilkan dan menyimpan semua kombinasi pola 3x3 yang valid
  * berdasarkan nilai clue (0–9).
