@@ -1,0 +1,6 @@
+ConfigName,AvgFitness,AvgTimeMs,AvgGenerations,SuccessRate
+P100_SingleBlock_Tourn,0.9953,6098.70,399.17,0.23
+P100_TwoPoint_Tourn,0.9958,2985.00,365.13,0.33
+P100_TwoPoint_Trunc,0.9961,12623.17,385.13,0.30
+P100_OnePoint_Tourn,0.9968,11017.57,331.30,0.40
+P100_MultiBlock_Tourn,0.9964,10338.80,351.70,0.37
